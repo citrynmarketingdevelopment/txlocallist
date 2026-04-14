@@ -1,0 +1,221 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top, rgba(255, 214, 102, 0.18), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(255, 170, 0, 0.08), transparent 24%),
+    linear-gradient(135deg, #130e08 0%, #0b0805 54%, #171108 100%);
+}
+
+.panel {
+  position: relative;
+  width: min(1120px, 100%);
+  padding: 40px;
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  background: var(--panel);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 14px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #ffcf53 0,
+    #ffcf53 18px,
+    #23190c 18px,
+    #23190c 36px
+  );
+}
+
+.eyebrow {
+  margin-bottom: 28px;
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 32px;
+  align-items: center;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stamp {
+  display: inline-flex;
+  width: fit-content;
+  padding: 10px 18px;
+  border: 2px solid rgba(255, 207, 83, 0.72);
+  border-radius: 999px;
+  color: #ffe29a;
+  background: rgba(255, 207, 83, 0.08);
+  box-shadow: 0 0 0 6px rgba(255, 207, 83, 0.04);
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+}
+
+.title {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(3rem, 10vw, 6.25rem);
+  line-height: 0.92;
+  letter-spacing: 0.04em;
+  color: #ffcf53;
+  text-shadow:
+    0 6px 0 rgba(88, 55, 0, 0.65),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.subtitle {
+  max-width: 38rem;
+  color: #f5ead0;
+  font-size: 1.12rem;
+  line-height: 1.75;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.badge {
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 207, 83, 0.14);
+  border-radius: 999px;
+  color: #fce8b0;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.notice {
+  max-width: 42rem;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 207, 83, 0.14);
+  border-left: 4px solid #ffcf53;
+  border-radius: 22px;
+  background: rgba(255, 207, 83, 0.07);
+  color: #fff8e7;
+  line-height: 1.7;
+}
+
+.notice strong {
+  color: #ffcf53;
+}
+
+.card {
+  padding: 22px;
+  border: 1px solid rgba(255, 207, 83, 0.14);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+    rgba(15, 10, 5, 0.76);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.imageFrame {
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 207, 83, 0.12);
+  background:
+    radial-gradient(circle at top, rgba(255, 214, 102, 0.12), transparent 34%),
+    #120d08;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.caption {
+  margin-top: 14px;
+  color: #d7c79d;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 207, 83, 0.12);
+}
+
+.command {
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 207, 83, 0.18);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  color: #ffe29a;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.95rem;
+}
+
+.footerText {
+  color: #cdbf99;
+  line-height: 1.7;
+}
+
+@media (max-width: 960px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    max-width: 460px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 16px;
+  }
+
+  .panel {
+    padding: 28px 20px;
+    border-radius: 24px;
+  }
+
+  .eyebrow {
+    margin-bottom: 20px;
+    letter-spacing: 0.18em;
+  }
+
+  .title {
+    font-size: clamp(2.6rem, 18vw, 4rem);
+  }
+
+  .subtitle,
+  .notice,
+  .footerText,
+  .caption {
+    font-size: 1rem;
+  }
+}
