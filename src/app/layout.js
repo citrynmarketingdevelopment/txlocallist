@@ -18,9 +18,9 @@ const bungee = Bungee({
 });
 
 export const metadata = {
-  title: "Citryn Next Boilerplate",
+  title: "TX Local List",
   description:
-    "Citryn starter repo for Next.js projects with Zustand installed and Prisma-ready environment placeholders.",
+    "TX Local List with secure signup, login, and a protected admin dashboard.",
   icons: {
     icon: "/citryn-gold.png",
     shortcut: "/citryn-gold.png",

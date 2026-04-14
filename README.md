@@ -1,83 +1,77 @@
-# Citryn Next Boilerplate
+# TX Local List
 
-Base repository for Citryn projects built on Next.js.
+Next.js 16 app with secure signup/login, Prisma 7, Neon Postgres, a seeded admin account flow, a protected admin dashboard, and an event publishing flow designed for Vercel deployment.
 
-This repo is meant to be the repeatable starting point for new work: a clean App Router setup, Zustand ready for client-side state, Prisma installed for database workflows, and starter environment variables for local PostgreSQL development.
+## Included
 
-## Current Stack
+- App Router auth flow with `/login` and `/signup`
+- Scrypt-hashed passwords stored in Prisma
+- HTTP-only, database-backed sessions with revocable session records
+- Protected `/dashboard` route for signed-in users
+- Protected `/admin` route for admin users only
+- Admin accounts created only by the seed script or from the admin dashboard
+- Public `/events` page with city, state, and tag filters
+- Authenticated event creation flow with seeded default event tags
+- Admin tag management from `/admin` for creating new event tags
+- Neon adapter setup for Prisma 7 on Vercel
 
-- Next.js 16 with the App Router
+## Stack
+
+- Next.js 16
 - React 19
-- Zustand for lightweight state management
-- Prisma CLI for schema, migration, and database workflows
-- ESLint 9 for baseline linting
-
-## What Is Included
-
-- `src/app` starter app structure
-- branded home page and favicon
-- `.env` with temporary local database values
-- `.env.example` for safe sharing and onboarding
-- a repo layout intended to be extended into future project templates
+- Prisma 7
+- Neon Postgres via `@prisma/adapter-neon`
+- ESLint 9
 
 ## Environment Variables
 
-The included `.env` is temporary and intentionally local-first.
+Set these in local `.env` and in Vercel project settings:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/next_boilerplate_dev?schema=public"
-DIRECT_URL="postgresql://postgres:postgres@localhost:5432/next_boilerplate_dev?schema=public"
-SHADOW_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/next_boilerplate_shadow?schema=public"
-DB_HOST="localhost"
-DB_PORT="5432"
-DB_NAME="next_boilerplate_dev"
-DB_USER="postgres"
-DB_PASSWORD="postgres"
+DATABASE_URL="postgresql://USER:PASSWORD@ep-example-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+DATABASE_URL_UNPOOLED="postgresql://USER:PASSWORD@ep-example.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+SEED_ADMIN_EMAIL="admin@example.com"
+SEED_ADMIN_PASSWORD="replace-with-a-long-random-password"
 ```
 
-Replace those values before connecting this boilerplate to a real environment.
+Notes:
+
+- `DATABASE_URL` is the pooled Neon connection string used by the running app.
+- `DATABASE_URL_UNPOOLED` is the direct Neon connection string used by Prisma CLI commands such as `db push` and migrations.
+- `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` are used by the seed script to create the initial admin account.
+- `db:seed-tags` creates the default event tags used by the event creation form.
 
 ## Local Development
 
 ```bash
 npm install
+npm run db:generate
 npm run dev
 ```
 
 Open `http://localhost:3000`.
 
-## How To Use This Boilerplate
+## Database Workflow
 
-1. Clone or copy this repository for a new project.
-2. Rename the app metadata, branding, and copy as needed.
-3. Replace the temporary `.env` values with project-specific credentials.
-4. Add a Prisma schema and install `@prisma/client` when the data model is ready.
-5. Add your shared folders, UI primitives, utility libraries, and store structure.
+After you plug in your real Neon credentials:
 
-## Recommended Next Setup
-
-- add `prisma/schema.prisma`
-- install `@prisma/client`
-- create a shared Prisma client singleton in `src/lib`
-- create a base Zustand store pattern for auth, UI, or session state
-- add reusable components, utilities, and app conventions you want across projects
-
-## Project Structure
-
-```text
-.
-|-- public/
-|-- src/
-|   |-- app/
-|-- .env
-|-- .env.example
-|-- package.json
+```bash
+npm run db:push
+npm run db:seed-admin
+npm run db:seed-tags
 ```
 
-## Notes
+That will create the `User`, `Session`, `Event`, and `Tag` tables defined in `prisma/schema.prisma`, seed the initial admin account, and seed the default event tags.
 
-- `.env` is ignored by git.
-- `.env.example` is tracked so new projects have a template.
-- Prisma is installed, but this repo does not yet define a schema or generated client.
+## Events
 
-That is deliberate. This repository is a base, not a finished opinionated product.
+- Public users can browse `/events`
+- Filters currently support `city`, `state`, and `tag`
+- Signed-in users can publish events from `/dashboard/events/new`
+- The event form currently expects a hosted image URL for the event artwork
+
+## Vercel Notes
+
+- Keep this app on the default Vercel Node.js runtime.
+- Add `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD` in the Vercel dashboard before production deploys.
+- `postinstall` already runs `prisma generate`, so the Prisma client is generated during installs on Vercel.
