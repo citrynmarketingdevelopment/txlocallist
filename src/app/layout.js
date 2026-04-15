@@ -1,5 +1,6 @@
-import { Bungee, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Bungee, Geist_Mono, Shrikhand, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import "./results/globals.css";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-sans",
@@ -11,8 +12,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const bungee = Bungee({
+const shrikhand = Shrikhand({
   variable: "--font-display",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+const bungee = Bungee({
+  variable: "--font-accent",
   subsets: ["latin"],
   weight: "400",
 });
@@ -32,7 +39,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${geistMono.variable} ${bungee.variable}`}
+      className={`${spaceGrotesk.variable} ${geistMono.variable} ${shrikhand.variable} ${bungee.variable}`}
     >
       <body suppressHydrationWarning={true}>{children}</body>
     </html>

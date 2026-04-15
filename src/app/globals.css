@@ -1,9 +1,21 @@
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
 :root {
-  --background: #0d0904;
-  --foreground: #f8efd6;
-  --muted: #b9ab87;
-  --panel: rgba(26, 18, 9, 0.88);
-  --border: rgba(255, 207, 83, 0.18);
+  --background: #f6e8c8;
+  --foreground: #2d241e;
+  --muted: #6a4a31;
+  --panel: rgba(255, 251, 240, 0.78);
+  --border: rgba(45, 36, 30, 0.18);
+
+  /* Retro color palette */
+  --primary: #D97706;
+  --background-light: #F5E6CA;
+  --background-dark: #1A1412;
+  --retro-teal: #2A9D8F;
+  --retro-yellow: #E9C46A;
+  --retro-orange: #F4A261;
+  --retro-red: #E76F51;
+  --retro-brown: #4A3728;
 }
 
 html {
@@ -23,6 +35,7 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-sans), sans-serif;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
