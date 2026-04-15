@@ -220,7 +220,6 @@
 .howItWorksSection {
   padding: 6rem 1.5rem;
   background-color: rgba(244, 162, 97, 0.2);
-  margin-top: 5rem;
 }
 
 .howItWorksContainer {
@@ -298,7 +297,7 @@
   padding: 8rem 1.5rem;
   overflow: hidden;
   position: relative;
-  margin-top: 5rem;
+
 }
 
 .ctaBg {
