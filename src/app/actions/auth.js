@@ -12,6 +12,7 @@ import {
   requireAdmin,
 } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { authSchemaMessage, isMissingPrismaTableError } from "@/lib/prisma-errors";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 12;
@@ -59,10 +60,20 @@ export async function signUpAction(_prevState, formData) {
     return buildErrorState("Fix the highlighted fields and try again.", fieldErrors);
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
+  let existingUser;
+
+  try {
+    existingUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return buildErrorState(`${authSchemaMessage} Run the Prisma schema sync, then try again.`);
+  }
 
   if (existingUser) {
     return buildErrorState("An account already exists for that email.", {
@@ -71,19 +82,33 @@ export async function signUpAction(_prevState, formData) {
   }
 
   const passwordHash = await hashPassword(password);
-  const user = await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      role: "USER",
-    },
-    select: {
-      id: true,
-      role: true,
-    },
-  });
+  let user;
 
-  await createUserSession(user.id);
+  try {
+    user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        role: "USER",
+      },
+      select: {
+        id: true,
+        role: true,
+      },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return buildErrorState(`${authSchemaMessage} Run the Prisma schema sync, then try again.`);
+  }
+
+  const sessionCreated = await createUserSession(user.id);
+
+  if (!sessionCreated) {
+    return buildErrorState(`${authSchemaMessage} Your account was created, but sign-in cannot start until the session table exists.`);
+  }
 
   redirect(getDashboardPath(user.role));
 }
@@ -104,10 +129,20 @@ export async function createAdminAction(_prevState, formData) {
     return buildErrorState("Fix the highlighted fields and try again.", fieldErrors);
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, role: true },
-  });
+  let existingUser;
+
+  try {
+    existingUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, role: true },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return buildErrorState(`${authSchemaMessage} Run the Prisma schema sync before creating admins.`);
+  }
 
   if (existingUser) {
     return buildErrorState("That email already belongs to an existing account.", {
@@ -117,13 +152,21 @@ export async function createAdminAction(_prevState, formData) {
 
   const passwordHash = await hashPassword(password);
 
-  await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      role: "ADMIN",
-    },
-  });
+  try {
+    await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        role: "ADMIN",
+      },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return buildErrorState(`${authSchemaMessage} Run the Prisma schema sync before creating admins.`);
+  }
 
   revalidatePath("/admin");
 
@@ -145,14 +188,24 @@ export async function loginAction(_prevState, formData) {
     });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: {
-      id: true,
-      role: true,
-      passwordHash: true,
-    },
-  });
+  let user;
+
+  try {
+    user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        role: true,
+        passwordHash: true,
+      },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return buildErrorState(`${authSchemaMessage} Run the Prisma schema sync, then log in again.`);
+  }
 
   if (!user) {
     return buildErrorState("Invalid email or password.");
@@ -164,12 +217,24 @@ export async function loginAction(_prevState, formData) {
     return buildErrorState("Invalid email or password.");
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: new Date() },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
 
-  await createUserSession(user.id);
+    return buildErrorState(`${authSchemaMessage} Run the Prisma schema sync, then log in again.`);
+  }
+
+  const sessionCreated = await createUserSession(user.id);
+
+  if (!sessionCreated) {
+    return buildErrorState(`${authSchemaMessage} Login cannot complete until the session table exists.`);
+  }
 
   redirect(getDashboardPath(user.role));
 }

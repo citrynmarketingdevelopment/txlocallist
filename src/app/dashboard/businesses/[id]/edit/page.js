@@ -1,0 +1,123 @@
+import { redirect } from "next/navigation";
+import { DashboardLayout } from "../../../DashboardLayout";
+import { EditBusinessForm } from "./EditBusinessForm";
+import styles from "../../../dashboard.module.css";
+import { prisma } from "@/lib/prisma";
+import { getCurrentSession } from "@/lib/auth/session";
+import { isMissingPrismaTableError, phase3SchemaMessage } from "@/lib/prisma-errors";
+
+/**
+ * Edit business page.
+ */
+export default async function EditBusinessPage({ params }) {
+  const session = await getCurrentSession();
+
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  const user = session.user;
+
+  if (user.role !== "OWNER" && user.role !== "ADMIN") {
+    redirect("/post-your-business");
+  }
+
+  let business;
+  let cities = [];
+  let categories = [];
+  let schemaNotice = null;
+
+  try {
+    business = await prisma.business.findUnique({
+      where: { id: params.id },
+      include: {
+        city: true,
+        categories: { include: { category: true } },
+        tags: { include: { tag: true } },
+      },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    schemaNotice = phase3SchemaMessage;
+  }
+
+  if (schemaNotice) {
+    return (
+      <DashboardLayout activeTab="businesses">
+        <div className={styles.pageHeader}>
+          <div>
+            <h1 className={styles.pageTitle}>Edit Listing</h1>
+            <p className={styles.pageSubtitle}>Listing data is waiting on the Phase 3 schema.</p>
+          </div>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.emptyState}>
+            <h2 className={styles.emptyStateTitle}>Edit Form Unavailable</h2>
+            <p className={styles.emptyStateDescription}>
+              {schemaNotice} Apply the database update and reload this page.
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!business) {
+    return <div>Business not found</div>;
+  }
+
+  // Check ownership
+  if (business.ownerId !== user.id && user.role !== "ADMIN") {
+    redirect("/dashboard/businesses");
+  }
+
+  try {
+    [cities, categories] = await Promise.all([
+      prisma.city.findMany({ orderBy: { name: "asc" } }),
+      prisma.category.findMany({ orderBy: { name: "asc" } }),
+    ]);
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return (
+      <DashboardLayout activeTab="businesses">
+        <div className={styles.pageHeader}>
+          <div>
+            <h1 className={styles.pageTitle}>Edit Listing</h1>
+            <p className={styles.pageSubtitle}>Listing data loaded, but reference data is still missing.</p>
+          </div>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.emptyState}>
+            <h2 className={styles.emptyStateTitle}>Reference Data Unavailable</h2>
+            <p className={styles.emptyStateDescription}>
+              {phase3SchemaMessage} Finish the schema update so cities and categories can load.
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout activeTab="businesses">
+      <div className={styles.pageHeader}>
+        <div>
+          <h1 className={styles.pageTitle}>Edit Listing</h1>
+          <p className={styles.pageSubtitle}>
+            Update {business.name}
+          </p>
+        </div>
+      </div>
+
+      <EditBusinessForm business={business} cities={cities} categories={categories} />
+    </DashboardLayout>
+  );
+}

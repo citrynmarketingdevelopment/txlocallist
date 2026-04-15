@@ -1,13 +1,15 @@
-:root {
-  --background-light: #F6E8C8;
-  --background-warm: #F6E8C8;
-  --background-panel: #F2E1BA;
-  --retro-brown: #2D241E;
-  --retro-brown-soft: #6A4A31;
-  --retro-teal: #4A9D9C;
-  --retro-red: #D64933;
-  --retro-orange: #F27D26;
-  --retro-yellow: #F9C846;
+/* =========================================================================
+   /results page-scoped styles
+   -------------------------------------------------------------------------
+   Design tokens and shared utilities (card-stack-effect, text-shadow-retro,
+   color / background utilities, animations) live in src/app/globals.css.
+   This file contains only styles specific to the /results layout.
+   ========================================================================= */
+
+/* Scope `--primary` to red inside the results page wrapper so that existing
+   `.text-primary` / `.see-all-link` usages stay red without affecting the
+   home page's amber `--primary`. */
+.app-container {
   --primary: var(--retro-red);
 }
 
@@ -17,22 +19,6 @@
   max-width: 220px;
   height: auto;
   margin-bottom: 1rem;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.5), transparent 28%),
-    linear-gradient(180deg, #f8edd2 0%, #f4e4bc 100%);
-  color: var(--retro-brown);
-  font-family: var(--font-sans);
-  min-height: 100vh;
-  overflow-x: hidden;
 }
 
 .grainy-overlay {
@@ -52,30 +38,15 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
-.card-stack-effect {
-  box-shadow: 4px 4px 0px var(--retro-brown);
-  transition: all 0.2s ease;
-}
-
-.card-stack-effect:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px var(--retro-brown);
-}
-
-.card-stack-effect:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px var(--retro-brown);
-}
-
-.text-shadow-retro {
-  text-shadow: 2px 2px 0px rgba(0,0,0,0.2);
-}
-
 /* Layout */
 .app-container {
   display: flex;
   min-height: 100vh;
   background-color: rgba(255, 251, 240, 0.78);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.5), transparent 28%),
+    linear-gradient(180deg, #f8edd2 0%, #f4e4bc 100%);
+  color: var(--retro-brown);
 }
 
 .sidebar {
@@ -110,12 +81,11 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, h4 {
+.app-container h1,
+.app-container h2,
+.app-container h3,
+.app-container h4 {
   font-family: var(--font-display);
-}
-
-.font-accent {
-  font-family: var(--font-accent);
 }
 
 /* Components */
@@ -178,6 +148,7 @@ h1, h2, h3, h4 {
   font-size: 0.875rem;
   color: var(--retro-brown);
   margin-left: 0.5rem;
+  background: transparent;
 }
 
 .search-button {
@@ -258,23 +229,6 @@ h1, h2, h3, h4 {
   position: relative;
   background-color: rgba(249, 200, 70, 0.2);
 }
-
-/* Utilities */
-.text-primary { color: var(--primary); }
-.text-retro-teal { color: var(--retro-teal); }
-.text-retro-red { color: var(--retro-red); }
-.text-retro-orange { color: var(--retro-orange); }
-.bg-retro-teal { background-color: var(--retro-teal); }
-.bg-retro-red { background-color: var(--retro-red); }
-.bg-retro-orange { background-color: var(--retro-orange); }
-.bg-retro-yellow { background-color: var(--retro-yellow); }
-.bg-retro-brown { background-color: var(--retro-brown); }
-.text-white { color: white; }
-
-.italic { font-style: italic; }
-.underline { text-decoration: underline; }
-.uppercase { text-transform: uppercase; }
-
 
 /* Sidebar Refinements */
 .sidebar-content {
@@ -844,13 +798,4 @@ h1, h2, h3, h4 {
   .promo-banner {
     padding: 2.5rem 1.25rem;
   }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }

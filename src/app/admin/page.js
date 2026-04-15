@@ -3,6 +3,7 @@ import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { isMissingPrismaTableError, phase3SchemaMessage } from "@/lib/prisma-errors";
 
 import styles from "../portal.module.css";
 import { AdminCreateForm } from "./AdminCreateForm";
@@ -22,8 +23,10 @@ function formatDate(value) {
 export default async function AdminPage() {
   const adminUser = await requireAdmin();
   const now = new Date();
-  const [userCount, adminCount, activeSessionCount, tagCount, recentUsers, tags] =
-    await prisma.$transaction([
+  let dashboardData;
+
+  try {
+    dashboardData = await prisma.$transaction([
       prisma.user.count(),
       prisma.user.count({ where: { role: "ADMIN" } }),
       prisma.session.count({ where: { expiresAt: { gt: now } } }),
@@ -49,12 +52,60 @@ export default async function AdminPage() {
           createdAt: true,
           _count: {
             select: {
-              events: true,
+              businessTags: true,
             },
           },
         },
       }),
     ]);
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return (
+      <main className={styles.page}>
+        <section className={styles.shell}>
+          <header className={styles.header}>
+            <p className={styles.eyebrow}>TX Local List // Admin Dashboard</p>
+            <div className={styles.titleRow}>
+              <div>
+                <h1 className={styles.title}>Admin setup needs one more step.</h1>
+                <p className={styles.copy}>
+                  Signed in as {adminUser.email}. The admin route is protected,
+                  but the current database has not fully caught up to the new schema.
+                </p>
+              </div>
+              <div className={styles.actions}>
+                <Link href="/dashboard" className={styles.secondaryLink}>
+                  User dashboard
+                </Link>
+                <form action={logoutAction}>
+                  <button type="submit" className={styles.ghostButton}>
+                    Log out
+                  </button>
+                </form>
+              </div>
+            </div>
+          </header>
+
+          <section className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <h2 className={styles.sectionTitle}>Database sync required</h2>
+                <p className={styles.sectionCopy}>
+                  {phase3SchemaMessage} Apply the Prisma schema update, then refresh this page.
+                </p>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    );
+  }
+
+  const [userCount, adminCount, activeSessionCount, tagCount, recentUsers, tags] =
+    dashboardData;
 
   return (
     <main className={styles.page}>
@@ -113,10 +164,10 @@ export default async function AdminPage() {
           </article>
 
           <article className={styles.card}>
-            <p className={styles.cardLabel}>Event tags</p>
+            <p className={styles.cardLabel}>Directory tags</p>
             <p className={styles.cardValue}>{tagCount}</p>
             <p className={styles.cardNote}>
-              These tags drive the event creation form and public filters.
+              Shared tags available for listings and future taxonomy controls.
             </p>
           </article>
         </section>
@@ -138,9 +189,9 @@ export default async function AdminPage() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <div>
-              <h2 className={styles.sectionTitle}>Create event tag</h2>
+              <h2 className={styles.sectionTitle}>Create directory tag</h2>
               <p className={styles.sectionCopy}>
-                Manage the tags available for users when they publish events.
+                Manage reusable tags that can be attached across the directory.
               </p>
             </div>
           </div>
@@ -151,9 +202,9 @@ export default async function AdminPage() {
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <div>
-              <h2 className={styles.sectionTitle}>Event tags</h2>
+              <h2 className={styles.sectionTitle}>Directory tags</h2>
               <p className={styles.sectionCopy}>
-                Existing tags and how many events currently use each one.
+                Existing tags and how many business records currently use each one.
               </p>
             </div>
           </div>
@@ -169,7 +220,7 @@ export default async function AdminPage() {
                   <tr>
                     <th>Name</th>
                     <th>Slug</th>
-                    <th>Events</th>
+                    <th>Businesses</th>
                     <th>Created</th>
                   </tr>
                 </thead>
@@ -178,7 +229,7 @@ export default async function AdminPage() {
                     <tr key={tag.id}>
                       <td>{tag.name}</td>
                       <td>{tag.slug}</td>
-                      <td>{tag._count.events}</td>
+                      <td>{tag._count.businessTags}</td>
                       <td>{formatDate(tag.createdAt)}</td>
                     </tr>
                   ))}

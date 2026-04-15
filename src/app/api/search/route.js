@@ -1,0 +1,145 @@
+/**
+ * GET /api/search?q=keyword&loc=city&category=slug&page=1
+ *
+ * Search for businesses in the directory.
+ *
+ * Query params:
+ *   - q (optional): keyword search (searched in name, description, tags)
+ *   - loc (optional): city slug or name (searched in city.slug or city.name)
+ *   - category (optional): category slug
+ *   - page (optional): page number (default 1, 10 results per page)
+ *
+ * Response:
+ *   {
+ *     success: boolean,
+ *     data: {
+ *       results: Business[],
+ *       total: number,
+ *       page: number,
+ *       pageSize: number,
+ *       hasMore: boolean,
+ *     },
+ *     error: string (if success === false)
+ *   }
+ */
+
+import { prisma } from "@/lib/prisma";
+
+const PAGE_SIZE = 12;
+
+export async function GET(request) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const q = searchParams.get("q")?.trim() || "";
+    const loc = searchParams.get("loc")?.trim() || "";
+    const category = searchParams.get("category")?.trim() || "";
+    const page = Math.max(1, parseInt(searchParams.get("page")) || 1);
+
+    // Build the where clause
+    const where = {
+      status: "ACTIVE", // Only show published listings
+      publishedAt: { not: null },
+    };
+
+    // Filter by city
+    if (loc) {
+      where.city = {
+        OR: [
+          { slug: loc.toLowerCase().replace(/\s+/g, "-") },
+          { name: { mode: "insensitive", contains: loc } },
+        ],
+      };
+    }
+
+    // Filter by keyword (search in name, description, tags)
+    if (q) {
+      where.OR = [
+        { name: { mode: "insensitive", contains: q } },
+        { description: { mode: "insensitive", contains: q } },
+        { tags: { some: { tag: { name: { mode: "insensitive", contains: q } } } } },
+      ];
+    }
+
+    // Filter by category
+    if (category) {
+      where.categories = {
+        some: {
+          category: { slug: category.toLowerCase().replace(/\s+/g, "-") },
+        },
+      };
+    }
+
+    // Get total count for pagination
+    const total = await prisma.business.count({ where });
+
+    // Fetch results with pagination
+    const results = await prisma.business.findMany({
+      where,
+      include: {
+        city: { select: { id: true, name: true, slug: true } },
+        plan: { select: { slug: true, features: true } },
+        photos: { take: 1, orderBy: { order: "asc" } },
+        categories: {
+          select: { category: { select: { name: true, slug: true } } },
+        },
+        tags: {
+          take: 3, // Limit tags shown in results
+          select: { tag: { select: { name: true, slug: true } } },
+        },
+      },
+      orderBy: [
+        // Priority search results first (if applicable)
+        { plan: { tier: "desc" } },
+        // Then by publication date
+        { publishedAt: "desc" },
+      ],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    });
+
+    // Transform results for the frontend
+    const transformedResults = results.map((business) => ({
+      id: business.id,
+      slug: business.slug,
+      name: business.name,
+      description: business.description,
+      city: business.city,
+      categories: business.categories.map((bc) => bc.category),
+      tags: business.tags.map((bt) => bt.tag),
+      image: business.photos[0] || null,
+      tier: business.plan?.slug || "free",
+      // Tier-gated fields
+      showContact: JSON.parse(business.plan?.features || "{}").SHOW_CONTACT,
+      showWebsite: JSON.parse(business.plan?.features || "{}").SHOW_WEBSITE,
+      phone: JSON.parse(business.plan?.features || "{}").SHOW_CONTACT
+        ? business.phone
+        : null,
+      website: JSON.parse(business.plan?.features || "{}").SHOW_WEBSITE
+        ? business.website
+        : null,
+    }));
+
+    const hasMore = (page - 1) * PAGE_SIZE + PAGE_SIZE < total;
+
+    return Response.json({
+      success: true,
+      data: {
+        results: transformedResults,
+        total,
+        page,
+        pageSize: PAGE_SIZE,
+        hasMore,
+      },
+    });
+  } catch (error) {
+    console.error("[search API error]", error);
+
+    return Response.json(
+      {
+        success: false,
+        error: "Failed to search businesses. Please try again.",
+      },
+      { status: 500 }
+    );
+  }
+}

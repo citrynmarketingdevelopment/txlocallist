@@ -1,0 +1,326 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* --- Hero / Gallery Section --- */
+.hero {
+  margin-bottom: 3rem;
+}
+
+.heroImage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: var(--stroke-bold);
+  overflow: hidden;
+}
+
+.heroImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroPlaceholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: var(--background-panel);
+  border-radius: var(--radius-lg);
+  border: var(--stroke-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholderText {
+  color: var(--muted);
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.photoGallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.thumbPhoto {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin);
+  cursor: pointer;
+  transition: transform var(--dur-sm) var(--ease-snap);
+}
+
+.thumbPhoto:hover {
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .photoGallery {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* --- Content Section --- */
+.content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  border: var(--stroke-bold);
+  box-shadow: var(--shadow-stack-md);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 2rem;
+}
+
+.title {
+  font-family: var(--font-display), cursive;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.location {
+  font-size: 1.125rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.tierBadge {
+  flex-shrink: 0;
+  background-color: var(--retro-yellow);
+  color: var(--retro-brown);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-pill);
+  border: var(--stroke-thin);
+  font-family: var(--font-accent), cursive;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+}
+
+.description {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  opacity: 0.85;
+}
+
+/* --- Sections --- */
+.sectionTitle {
+  font-family: var(--font-display), cursive;
+  font-size: 1.5rem;
+  margin-bottom: 1.25rem;
+  color: var(--retro-brown);
+}
+
+/* Contact Section */
+.contactSection {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background-color: rgba(249, 200, 70, 0.08);
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin);
+}
+
+.contactBlock {
+  margin-bottom: 1.5rem;
+}
+
+.contactLink {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--retro-teal);
+  color: white;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-weight: bold;
+  transition: transform var(--dur-sm) var(--ease-snap);
+  margin-bottom: 0.75rem;
+}
+
+.contactLink:hover {
+  transform: translate(-2px, -2px);
+}
+
+.websiteButton {
+  display: inline-block;
+  padding: 0.875rem 2rem;
+  background-color: var(--retro-red);
+  color: white;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-family: var(--font-accent), cursive;
+  font-weight: bold;
+  transition: transform var(--dur-sm) var(--ease-snap);
+}
+
+.websiteButton:hover {
+  transform: scale(1.05);
+}
+
+.socials {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.socialLink {
+  padding: 0.5rem 1rem;
+  background-color: var(--retro-brown);
+  color: white;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+  transition: background-color var(--dur-sm) var(--ease-snap);
+}
+
+.socialLink:hover {
+  background-color: var(--retro-teal);
+}
+
+.upgradePrompt {
+  padding: 1rem;
+  background-color: rgba(214, 73, 51, 0.08);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--retro-red);
+}
+
+.upgradePrompt p {
+  margin-bottom: 0.75rem;
+}
+
+/* Chips / Tags */
+.categories,
+.tags {
+  margin-bottom: 2rem;
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.chip,
+.chipSecondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: all var(--dur-sm) var(--ease-snap);
+  border: var(--stroke-thin);
+}
+
+.chip {
+  background-color: var(--retro-yellow);
+  color: var(--retro-brown);
+}
+
+.chip:hover {
+  background-color: var(--retro-orange);
+  transform: translateY(-2px);
+}
+
+.chipSecondary {
+  background-color: transparent;
+  color: var(--retro-teal);
+}
+
+.chipSecondary:hover {
+  background-color: rgba(74, 157, 156, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Jobs Section */
+.jobsSection {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: rgba(74, 157, 156, 0.06);
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin);
+}
+
+.jobsList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.jobCard {
+  padding: 1rem;
+  background-color: white;
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin);
+  text-decoration: none;
+  transition: all var(--dur-sm) var(--ease-snap);
+}
+
+.jobCard:hover {
+  box-shadow: var(--shadow-stack-md);
+  transform: translateY(-2px);
+}
+
+.jobTitle {
+  font-family: var(--font-accent), cursive;
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  color: var(--retro-brown);
+}
+
+.jobType {
+  font-size: 0.875rem;
+  color: var(--retro-teal);
+  text-transform: capitalize;
+  margin-bottom: 0.5rem;
+}
+
+.jobSalary {
+  font-weight: bold;
+  color: var(--retro-red);
+  font-size: 1rem;
+}
+
+/* Navigation */
+.navigation {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: var(--stroke-thin);
+}
+
+.backLink {
+  display: inline-block;
+  color: var(--retro-teal);
+  text-decoration: underline;
+  font-weight: bold;
+  transition: color var(--dur-sm) var(--ease-snap);
+}
+
+.backLink:hover {
+  color: var(--retro-red);
+}

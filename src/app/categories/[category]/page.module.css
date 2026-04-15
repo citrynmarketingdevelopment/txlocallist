@@ -1,0 +1,157 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* Hero Section */
+.hero {
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, rgba(214, 73, 51, 0.1), rgba(242, 125, 38, 0.1));
+  border-radius: var(--radius-xl);
+  border: var(--stroke-thin);
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.heroTitle {
+  font-family: var(--font-display), cursive;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  color: var(--retro-brown);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.icon {
+  font-size: 1.2em;
+}
+
+.heroTagline {
+  font-size: 1.125rem;
+  color: var(--muted);
+  font-weight: bold;
+}
+
+/* City Sections */
+.citySections {
+  margin-bottom: 4rem;
+}
+
+.citySection {
+  margin-bottom: 3rem;
+}
+
+.cityTitle {
+  font-family: var(--font-accent), cursive;
+  font-size: 1.75rem;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--retro-brown);
+}
+
+.cityLink {
+  color: var(--retro-teal);
+  text-decoration: none;
+  transition: color var(--dur-sm) var(--ease-snap);
+  border-bottom: 2px solid currentColor;
+}
+
+.cityLink:hover {
+  color: var(--retro-red);
+}
+
+/* Business Grid */
+.businessGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: rgba(248, 237, 210, 0.5);
+  border-radius: var(--radius-lg);
+  border: var(--stroke-thin);
+  margin-bottom: 3rem;
+}
+
+.emptyState h2 {
+  font-family: var(--font-display), cursive;
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--retro-brown);
+}
+
+.emptyState p {
+  font-size: 1.125rem;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.ctaButton {
+  display: inline-block;
+  padding: 1rem 2.5rem;
+  background-color: var(--retro-red);
+  color: white;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-family: var(--font-accent), cursive;
+  font-weight: bold;
+  font-size: 1.125rem;
+  transition: transform var(--dur-sm) var(--ease-snap);
+}
+
+.ctaButton:hover {
+  transform: scale(1.05);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: var(--stroke-thin);
+}
+
+.breadcrumb a {
+  color: var(--retro-teal);
+  text-decoration: underline;
+  font-weight: bold;
+  transition: color var(--dur-sm) var(--ease-snap);
+}
+
+.breadcrumb a:hover {
+  color: var(--retro-red);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 1rem;
+  }
+
+  .hero {
+    padding: 2rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .heroTitle {
+    font-size: 1.75rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cityTitle {
+    font-size: 1.25rem;
+  }
+
+  .businessGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}

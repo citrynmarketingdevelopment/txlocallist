@@ -1,0 +1,103 @@
+.businessCard {
+  position: relative;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: var(--stroke-bold);
+  box-shadow: var(--shadow-stack-xl);
+  transition: transform var(--dur-sm) var(--ease-snap);
+}
+
+.businessCard:hover {
+  transform: translateY(-0.5rem);
+}
+
+.businessImageContainer {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: var(--stroke-thin);
+}
+
+.businessImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.businessCard:hover .businessImage {
+  transform: scale(1.1);
+}
+
+.businessBadge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  border: var(--stroke-thin);
+  font-family: var(--font-accent), cursive;
+}
+
+.badgeYellow { background-color: var(--retro-yellow); color: var(--retro-brown); }
+.badgeRed    { background-color: var(--retro-red);    color: white; }
+.badgeTeal   { background-color: var(--retro-teal);   color: white; }
+.badgeOrange { background-color: var(--retro-orange); color: white; }
+
+.businessTitle {
+  font-family: var(--font-display), cursive;
+  font-size: 1.875rem;
+  margin-bottom: 0.5rem;
+  transition: color var(--dur-sm) var(--ease-snap);
+}
+
+.businessCard:hover .businessTitle {
+  color: var(--primary);
+}
+
+.businessDescription {
+  font-size: 0.875rem;
+  opacity: 0.7;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.businessFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.businessCategory {
+  font-family: var(--font-accent), cursive;
+  color: var(--retro-teal);
+}
+
+.businessArrowButton {
+  background-color: var(--retro-brown);
+  color: white;
+  padding: 0.5rem;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--dur-sm) var(--ease-snap);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.businessArrowButton:hover {
+  background-color: var(--retro-teal);
+}
+
+.arrowIcon {
+  font-size: 1.25rem;
+}

@@ -61,8 +61,8 @@ export function TagCreateForm() {
       </div>
 
       <p className={styles.formHelper}>
-        Tags created here become available immediately in the event creation
-        flow and on the public events filters.
+        Tags created here become available immediately for directory data and
+        future admin-managed taxonomy flows.
       </p>
 
       <SubmitButton />

@@ -1,5 +1,5 @@
 {
-  "name": "next-boilerplate",
+  "name": "tx-localist",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,8 +9,14 @@
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed-cities": "node scripts/seed-cities.mjs",
+    "db:seed-categories": "node scripts/seed-categories.mjs",
+    "db:seed-plans": "node scripts/seed-plans.mjs",
+    "db:seed-events": "node scripts/seed-event-data.mjs",
     "db:seed-admin": "node scripts/seed-admin.mjs",
     "db:seed-tags": "node scripts/seed-event-tags.mjs",
+    "db:seed-all": "npm run db:seed-cities && npm run db:seed-categories && npm run db:seed-plans && npm run db:seed-events",
     "postinstall": "prisma generate"
   },
   "dependencies": {

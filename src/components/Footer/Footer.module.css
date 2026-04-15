@@ -1,0 +1,90 @@
+.footer {
+  background-color: var(--background-light);
+  padding: 3rem 1.5rem;
+  border-top: var(--stroke-bold);
+}
+
+.footerContainer {
+  max-width: 80rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .footerContainer {
+    flex-direction: row;
+  }
+}
+
+.footerLogo {
+  height: 4rem;
+  width: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .footerLogo {
+    height: 5rem;
+    width: 5rem;
+  }
+}
+
+.footerLinks {
+  display: flex;
+  gap: 2rem;
+  font-family: var(--font-accent), cursive;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+}
+
+.footerLink {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--dur-sm) var(--ease-snap);
+}
+
+.footerLink:hover {
+  color: var(--primary);
+}
+
+.footerSocial {
+  display: flex;
+  gap: 1rem;
+}
+
+.socialButton {
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: var(--retro-brown);
+  color: white;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--dur-sm) var(--ease-snap);
+  text-decoration: none;
+}
+
+.socialButton:hover {
+  background-color: var(--primary);
+}
+
+.socialIcon {
+  font-size: 1.25rem;
+}
+
+.footerCopyright {
+  text-align: center;
+  margin-top: 3rem;
+  opacity: 0.5;
+  font-weight: 700;
+  font-size: 0.875rem;
+}

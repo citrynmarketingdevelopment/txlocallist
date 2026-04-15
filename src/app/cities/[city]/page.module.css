@@ -1,0 +1,218 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* Hero Section */
+.hero {
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, rgba(249, 200, 70, 0.15), rgba(74, 157, 156, 0.1));
+  border-radius: var(--radius-xl);
+  border: var(--stroke-thin);
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.heroContent {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.heroTitle {
+  font-family: var(--font-display), cursive;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  color: var(--retro-brown);
+}
+
+.heroAccent {
+  color: var(--retro-teal);
+}
+
+.heroTagline {
+  font-size: 1.25rem;
+  color: var(--muted);
+  font-weight: bold;
+}
+
+/* Search Section */
+.searchSection {
+  margin-bottom: 4rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Section Titles */
+.sectionTitle {
+  font-family: var(--font-display), cursive;
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  color: var(--retro-brown);
+}
+
+/* Featured Section */
+.featuredSection {
+  margin-bottom: 4rem;
+}
+
+.businessGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.viewAllContainer {
+  text-align: center;
+}
+
+.viewAllLink {
+  display: inline-block;
+  padding: 0.875rem 2rem;
+  background-color: var(--retro-red);
+  color: white;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-family: var(--font-accent), cursive;
+  font-weight: bold;
+  transition: transform var(--dur-sm) var(--ease-snap);
+}
+
+.viewAllLink:hover {
+  transform: scale(1.05);
+}
+
+/* Categories Section */
+.categoriesSection {
+  margin-bottom: 4rem;
+}
+
+.categoriesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.categoryBlock {
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: var(--radius-lg);
+  border: var(--stroke-bold);
+  box-shadow: var(--shadow-stack-md);
+  transition: transform var(--dur-sm) var(--ease-snap);
+}
+
+.categoryBlock:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-stack-lg);
+}
+
+.categoryTitle {
+  font-family: var(--font-accent), cursive;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.categoryLink {
+  color: var(--retro-teal);
+  text-decoration: none;
+  transition: color var(--dur-sm) var(--ease-snap);
+}
+
+.categoryLink:hover {
+  color: var(--retro-red);
+}
+
+.categoryCount {
+  font-size: 0.875rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: rgba(248, 237, 210, 0.5);
+  border-radius: var(--radius-lg);
+  border: var(--stroke-thin);
+  margin-bottom: 3rem;
+}
+
+.emptyState h2 {
+  font-family: var(--font-display), cursive;
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--retro-brown);
+}
+
+.emptyState p {
+  font-size: 1.125rem;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.ctaButton {
+  display: inline-block;
+  padding: 1rem 2.5rem;
+  background-color: var(--retro-red);
+  color: white;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-family: var(--font-accent), cursive;
+  font-weight: bold;
+  font-size: 1.125rem;
+  transition: transform var(--dur-sm) var(--ease-snap);
+}
+
+.ctaButton:hover {
+  transform: scale(1.05);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: var(--stroke-thin);
+}
+
+.breadcrumb a {
+  color: var(--retro-teal);
+  text-decoration: underline;
+  font-weight: bold;
+  transition: color var(--dur-sm) var(--ease-snap);
+}
+
+.breadcrumb a:hover {
+  color: var(--retro-red);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 1rem;
+  }
+
+  .hero {
+    padding: 2rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .heroTitle {
+    font-size: 2rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.75rem;
+  }
+
+  .businessGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .categoriesGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

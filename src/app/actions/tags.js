@@ -81,8 +81,8 @@ export async function createTagAction(_prevState, formData) {
   });
 
   revalidatePath("/admin");
-  revalidatePath("/dashboard/events/new");
-  revalidatePath("/events");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/businesses");
 
   return {
     error: "",

@@ -1,26 +1,84 @@
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
+/* =========================================================================
+   TX LOCALIST — DESIGN TOKENS (single source of truth)
+   -------------------------------------------------------------------------
+   All color, spacing, radius, shadow, and font tokens live here. Page- and
+   component-level stylesheets should reference these variables instead of
+   re-declaring hex values.
+   ========================================================================= */
+
 :root {
-  --background: #f6e8c8;
-  --foreground: #2d241e;
-  --muted: #6a4a31;
-  --panel: rgba(255, 251, 240, 0.78);
-  --border: rgba(45, 36, 30, 0.18);
+  /* --- Brand palette (retro Texas) -------------------------------------- */
+  --retro-brown:       #2D241E;
+  --retro-brown-soft:  #6A4A31;
+  --retro-teal:        #4A9D9C;
+  --retro-red:         #D64933;
+  --retro-orange:      #F27D26;
+  --retro-yellow:      #F9C846;
 
-  /* Retro color palette */
-  --primary: #D97706;
-  --background-light: #F5E6CA;
-  --background-dark: #1A1412;
-  --retro-teal: #2A9D8F;
-  --retro-yellow: #E9C46A;
-  --retro-orange: #F4A261;
-  --retro-red: #E76F51;
-  --retro-brown: #4A3728;
+  /* --- Surface tokens --------------------------------------------------- */
+  --background:        #F6E8C8;   /* page background (cream) */
+  --background-light:  #F6E8C8;
+  --background-warm:   #F6E8C8;
+  --background-panel:  #F2E1BA;
+  --background-dark:   #1A1412;
+  --panel:             rgba(255, 251, 240, 0.78);
+  --border:            rgba(45, 36, 30, 0.18);
+
+  /* --- Semantic tokens -------------------------------------------------- */
+  --foreground:        var(--retro-brown);
+  --muted:             var(--retro-brown-soft);
+  --primary:           #D97706;              /* home hero accent (amber) */
+  --accent:            var(--retro-teal);
+  --danger:            var(--retro-red);
+
+  /* --- Radii ------------------------------------------------------------ */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-pill: 9999px;
+
+  /* --- Elevation (hard retro shadows, no blur) -------------------------- */
+  --shadow-stack-sm: 2px 2px 0 var(--retro-brown);
+  --shadow-stack-md: 4px 4px 0 var(--retro-brown);
+  --shadow-stack-lg: 6px 6px 0 var(--retro-brown);
+  --shadow-stack-xl: 8px 8px 0 var(--retro-brown);
+  --shadow-stack-soft: 6px 6px 0 var(--retro-brown-soft);
+
+  /* --- Borders ---------------------------------------------------------- */
+  --stroke-thin:   2px solid var(--retro-brown);
+  --stroke-medium: 3px solid var(--retro-brown);
+  --stroke-bold:   4px solid var(--retro-brown);
+
+  /* --- Motion ----------------------------------------------------------- */
+  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-xs: 120ms;
+  --dur-sm: 180ms;
+  --dur-md: 240ms;
+  --dur-lg: 360ms;
+
+  /* --- Z-index layering ------------------------------------------------- */
+  --z-nav: 40;
+  --z-sticky: 30;
+  --z-overlay: 50;
+  --z-modal: 60;
 }
 
-html {
-  height: 100%;
+/* =========================================================================
+   RESET
+   ========================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
+
+html { height: 100%; }
 
 html,
 body {
@@ -34,19 +92,130 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
 a {
   color: inherit;
   text-decoration: none;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+}
+
+/* =========================================================================
+   ACCESSIBILITY PRIMITIVES
+   ========================================================================= */
+
+:focus-visible {
+  outline: 3px solid var(--retro-teal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--retro-brown);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  z-index: var(--z-modal);
+  text-decoration: none;
+  font-family: var(--font-accent), sans-serif;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================================
+   SHARED UTILITIES (used by both home and results)
+   ========================================================================= */
+
+.card-stack-effect {
+  box-shadow: var(--shadow-stack-md);
+  transition: transform var(--dur-sm) var(--ease-snap),
+              box-shadow var(--dur-sm) var(--ease-snap);
+}
+
+.card-stack-effect:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-stack-lg);
+}
+
+.card-stack-effect:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-stack-sm);
+}
+
+.text-shadow-retro {
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.font-accent  { font-family: var(--font-accent), sans-serif; }
+.font-display { font-family: var(--font-display), serif; }
+
+.text-primary       { color: var(--primary); }
+.text-retro-teal    { color: var(--retro-teal); }
+.text-retro-red     { color: var(--retro-red); }
+.text-retro-orange  { color: var(--retro-orange); }
+.text-retro-yellow  { color: var(--retro-yellow); }
+.text-white         { color: #fff; }
+
+.bg-retro-teal    { background-color: var(--retro-teal); }
+.bg-retro-red     { background-color: var(--retro-red); }
+.bg-retro-orange  { background-color: var(--retro-orange); }
+.bg-retro-yellow  { background-color: var(--retro-yellow); }
+.bg-retro-brown   { background-color: var(--retro-brown); }
+
+.italic    { font-style: italic; }
+.underline { text-decoration: underline; }
+.uppercase { text-transform: uppercase; }
+
+/* =========================================================================
+   ANIMATIONS
+   ========================================================================= */
+
+.animate-spin {
+  animation: tx-spin 1s linear infinite;
+}
+
+@keyframes tx-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }

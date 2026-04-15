@@ -7,21 +7,72 @@ datasource db {
   provider = "postgresql"
 }
 
+// =============================================================================
+// ENUMS
+// =============================================================================
+
 enum Role {
-  USER
-  ADMIN
+  USER       // Standard Localist (consumer browsing directory + jobs)
+  OWNER      // Business owner who can create/manage listings + post jobs
+  ADMIN      // Staff who can moderate and manage the platform
 }
+
+enum BusinessStatus {
+  DRAFT      // Not yet published
+  ACTIVE     // Live on the directory
+  PAUSED     // Temporarily hidden by owner
+  SUSPENDED  // Removed by admin
+  ARCHIVED   // Soft-deleted
+}
+
+enum SubscriptionStatus {
+  ACTIVE       // Currently paying
+  PAST_DUE     // Payment failed, grace period
+  CANCELED     // Ended, downgrading to free
+  EXPIRED      // Trial ended without converting
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  TEMPORARY
+  INTERNSHIP
+  FREELANCE
+}
+
+enum JobStatus {
+  ACTIVE    // Live and accepting applications
+  CLOSED    // Not accepting applications but still visible
+  ARCHIVED  // Hidden
+}
+
+// =============================================================================
+// CORE ENTITIES
+// =============================================================================
 
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
   passwordHash String
   role         Role      @default(USER)
+  name         String?
+  avatarUrl    String?
+
+  // Localist favorites + searches
+  favorites    Favorite[]
+
+  // Owner info (only filled if role includes OWNER)
+  ownedBusinesses Business[]
+
+  // Session management
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   sessions     Session[]
-  events       Event[]   @relation("EventCreator")
+
+  @@index([email])
+  @@index([role])
 }
 
 model Session {
@@ -36,28 +87,39 @@ model Session {
   @@index([expiresAt])
 }
 
-model Event {
-  id          String   @id @default(cuid())
-  imageUrl    String
-  title       String
-  description String
-  address     String
-  addressName String
-  zipCode     String
-  city        String
-  state       String
-  country     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  creatorId   String
-  creator     User     @relation("EventCreator", fields: [creatorId], references: [id], onDelete: Cascade)
-  tags        Tag[]
+// =============================================================================
+// DIRECTORY TAXONOMY
+// =============================================================================
 
-  @@index([creatorId])
-  @@index([city])
+model City {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  state     String   // "Texas", "TX", etc.
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  businesses Business[]
+
+  @@index([slug])
   @@index([state])
-  @@index([country])
-  @@index([createdAt])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?  // Material Icons name or emoji
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  businessCategories BusinessCategory[]
+
+  @@index([slug])
 }
 
 model Tag {
@@ -66,7 +128,241 @@ model Tag {
   slug      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  events    Event[]
+
+  // Relations
+  businessTags BusinessTag[]
 
   @@index([slug])
+}
+
+// =============================================================================
+// BUSINESS LISTINGS (the core product)
+// =============================================================================
+
+model Plan {
+  id              String   @id @default(cuid())
+  name            String   // "Free", "Starter", "Pro", "Premium"
+  slug            String   @unique
+  tier            Int      // 0=FREE, 1=TIER1, 2=TIER2, 3=TIER3 (for sorting)
+  priceCents      Int      // Annual or monthly price in cents (0 for free)
+  billingPeriod   String   @default("monthly") // "monthly" or "annual"
+
+  // Feature flags (JSON for extensibility)
+  features        String   @default("{}")  // JSON string of feature flags
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  subscriptions   Subscription[]
+  businesses      Business[] @relation("CurrentPlan")
+
+  @@index([slug])
+  @@index([tier])
+}
+
+model Business {
+  id              String   @id @default(cuid())
+
+  // Identity & slug
+  slug            String   @unique // "cafe-name-austin"
+  name            String
+  description     String
+
+  // Contact
+  phone           String?
+  email           String?
+  website         String?
+
+  // Location
+  address         String
+  addressName     String?
+  zipCode         String
+  cityId          String
+  city            City     @relation(fields: [cityId], references: [id])
+  state           String   @default("Texas")
+  country         String   @default("USA")
+  lat             Float?
+  lng             Float?
+
+  // Owner
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Subscription & status
+  planId          String?
+  plan            Plan?    @relation("CurrentPlan", fields: [planId], references: [id], onDelete: SetNull)
+  subscription    Subscription?
+  status          BusinessStatus @default(DRAFT)
+  publishedAt     DateTime?
+
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  photos          Photo[]
+  categories      BusinessCategory[]
+  tags            BusinessTag[]
+  socialLinks     SocialLink[]
+  jobs            Job[]
+  favorites       Favorite[]
+
+  @@unique([slug, cityId]) // slug is unique per city, not global
+  @@index([ownerId])
+  @@index([cityId])
+  @@index([status])
+  @@index([planId])
+  @@index([publishedAt])
+}
+
+model Photo {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  url         String
+  width       Int?
+  height      Int?
+  alt         String?
+  order       Int      @default(0)
+
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, order])
+}
+
+model BusinessCategory {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, categoryId])
+  @@index([businessId])
+  @@index([categoryId])
+}
+
+model BusinessTag {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  tagId       String
+  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, tagId])
+  @@index([businessId])
+  @@index([tagId])
+}
+
+model SocialLink {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  platform    String   // "instagram", "facebook", "twitter", "tiktok", etc.
+  url         String
+  order       Int      @default(0)
+
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, platform])
+}
+
+// =============================================================================
+// SUBSCRIPTIONS & BILLING
+// =============================================================================
+
+model Subscription {
+  id                    String   @id @default(cuid())
+  businessId            String   @unique
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  planId                String
+  plan                  Plan     @relation(fields: [planId], references: [id])
+
+  // Stripe integration
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+
+  // Lifecycle
+  status                SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean            @default(false)
+  canceledAt            DateTime?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([planId])
+  @@index([status])
+  @@index([stripeSubscriptionId])
+}
+
+// =============================================================================
+// JOBS BOARD
+// =============================================================================
+
+model Job {
+  id              String   @id @default(cuid())
+  businessId      String
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String
+
+  employmentType  EmploymentType
+  salaryMin       Int?       // in cents
+  salaryMax       Int?       // in cents
+  currency        String   @default("USD")
+  isRemote        Boolean  @default(false)
+
+  applyUrl        String?   // external application link
+  applyEmail      String?   // internal application email
+
+  status          JobStatus @default(ACTIVE)
+  expiresAt       DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// =============================================================================
+// USER ENGAGEMENT
+// =============================================================================
+
+model Favorite {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, businessId])
+  @@index([userId])
+  @@index([businessId])
+}
+
+// =============================================================================
+// AUDIT & LOGGING (optional, Phase 10+)
+// =============================================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?  // User who performed the action (null for system)
+  action      String   // "create", "update", "publish", "suspend", etc.
+  entity      String   // "Business", "Job", "Subscription", etc.
+  entityId    String   // The ID of the entity affected
+  meta        String   @default("{}") // JSON string of changes
+  createdAt   DateTime @default(now())
+
+  @@index([entityId])
+  @@index([createdAt])
 }

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { isMissingPrismaTableError } from "@/lib/prisma-errors";
 
 const SESSION_COOKIE_NAME = "txlocallist_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
@@ -35,22 +36,30 @@ export async function createUserSession(userId) {
   const tokenHash = hashToken(sessionToken);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
-  await prisma.session.deleteMany({
-    where: {
-      OR: [
-        { userId, expiresAt: { lt: new Date() } },
-        { expiresAt: { lt: new Date() } },
-      ],
-    },
-  });
+  try {
+    await prisma.session.deleteMany({
+      where: {
+        OR: [
+          { userId, expiresAt: { lt: new Date() } },
+          { expiresAt: { lt: new Date() } },
+        ],
+      },
+    });
 
-  await prisma.session.create({
-    data: {
-      expiresAt,
-      tokenHash,
-      userId,
-    },
-  });
+    await prisma.session.create({
+      data: {
+        expiresAt,
+        tokenHash,
+        userId,
+      },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return false;
+  }
 
   const cookieStore = await cookies();
 
@@ -59,6 +68,8 @@ export async function createUserSession(userId) {
     sessionToken,
     getSessionCookieOptions(expiresAt),
   );
+
+  return true;
 }
 
 export async function clearCurrentSession() {
@@ -66,9 +77,15 @@ export async function clearCurrentSession() {
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (sessionToken) {
-    await prisma.session.deleteMany({
-      where: { tokenHash: hashToken(sessionToken) },
-    });
+    try {
+      await prisma.session.deleteMany({
+        where: { tokenHash: hashToken(sessionToken) },
+      });
+    } catch (error) {
+      if (!isMissingPrismaTableError(error)) {
+        throw error;
+      }
+    }
   }
 
   cookieStore.set(SESSION_COOKIE_NAME, "", {
@@ -85,20 +102,30 @@ export async function getCurrentSession() {
     return null;
   }
 
-  const session = await prisma.session.findUnique({
-    where: { tokenHash: hashToken(sessionToken) },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          createdAt: true,
-          lastLoginAt: true,
+  let session = null;
+
+  try {
+    session = await prisma.session.findUnique({
+      where: { tokenHash: hashToken(sessionToken) },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            createdAt: true,
+            lastLoginAt: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
+
+    return null;
+  }
 
   if (!session || session.expiresAt <= new Date()) {
     return null;

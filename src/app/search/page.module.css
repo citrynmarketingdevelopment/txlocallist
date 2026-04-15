@@ -1,0 +1,224 @@
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Search Bar */
+.searchSection {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+/* Results Meta */
+.resultsMeta {
+  padding: 1rem;
+  background-color: rgba(74, 157, 156, 0.08);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--retro-teal);
+}
+
+.resultsMeta p {
+  color: var(--retro-brown);
+  font-weight: bold;
+}
+
+/* Error Banner */
+.errorBanner {
+  padding: 1.25rem;
+  background-color: rgba(214, 73, 51, 0.1);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--retro-red);
+  color: var(--retro-red);
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Loading State */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--background-panel);
+  border-top: 4px solid var(--retro-teal);
+  border-radius: 50%;
+  animation: tx-spin 1s linear infinite;
+}
+
+/* Results Grid */
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 3rem;
+  padding: 2rem;
+  background-color: rgba(248, 237, 210, 0.3);
+  border-radius: var(--radius-lg);
+  border: var(--stroke-thin);
+}
+
+.paginationButton {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--retro-brown);
+  color: white;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-accent), cursive;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all var(--dur-sm) var(--ease-snap);
+  min-height: 44px;
+}
+
+.paginationButton:hover:not(:disabled) {
+  background-color: var(--retro-teal);
+  transform: translate(-2px, -2px);
+}
+
+.paginationButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.paginationInfo {
+  font-family: var(--font-accent), cursive;
+  font-weight: bold;
+  color: var(--retro-brown);
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: rgba(248, 237, 210, 0.5);
+  border-radius: var(--radius-lg);
+  border: var(--stroke-thin);
+  margin: 2rem 0;
+}
+
+.emptyState h2 {
+  font-family: var(--font-display), cursive;
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--retro-brown);
+}
+
+.emptyState p {
+  font-size: 1.125rem;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.suggestions h3 {
+  font-family: var(--font-accent), cursive;
+  margin-bottom: 1rem;
+  color: var(--retro-brown);
+}
+
+.suggestionChips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.suggestionChip {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--retro-yellow);
+  color: var(--retro-brown);
+  border: var(--stroke-thin);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: bold;
+  transition: all var(--dur-sm) var(--ease-snap);
+  min-height: 44px;
+}
+
+.suggestionChip:hover {
+  background-color: var(--retro-orange);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-stack-md);
+}
+
+/* Skeleton Loading */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.skeletonBar {
+  height: 60px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: var(--radius-lg);
+}
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.skeletonCard {
+  aspect-ratio: 1;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: var(--radius-lg);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 1rem;
+  }
+
+  .resultsGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .paginationButton {
+    width: 100%;
+  }
+}
