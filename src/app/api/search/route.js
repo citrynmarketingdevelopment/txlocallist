@@ -30,10 +30,11 @@ const PAGE_SIZE = 12;
 export async function GET(request) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const q = searchParams.get("q")?.trim() || "";
-    const loc = searchParams.get("loc")?.trim() || "";
+    const q        = searchParams.get("q")?.trim()        || "";
+    const loc      = searchParams.get("loc")?.trim()      || "";
     const category = searchParams.get("category")?.trim() || "";
-    const page = Math.max(1, parseInt(searchParams.get("page")) || 1);
+    const sort     = searchParams.get("sort")?.trim()     || "";
+    const page     = Math.max(1, parseInt(searchParams.get("page")) || 1);
 
     // Build the where clause
     const where = {
@@ -77,6 +78,18 @@ export async function GET(request) {
     // Get total count for pagination
     const total = await prisma.business.count({ where });
 
+    // Build orderBy — popular sorts by saved count, default by tier then date
+    const orderBy = sort === "popular"
+      ? [
+          { favorites: { _count: "desc" } },
+          { plan: { tier: "desc" } },
+          { publishedAt: "desc" },
+        ]
+      : [
+          { plan: { tier: "desc" } },
+          { publishedAt: "desc" },
+        ];
+
     // Fetch results with pagination
     const results = await prisma.business.findMany({
       where,
@@ -88,16 +101,12 @@ export async function GET(request) {
           select: { category: { select: { name: true, slug: true } } },
         },
         tags: {
-          take: 3, // Limit tags shown in results
+          take: 3,
           select: { tag: { select: { name: true, slug: true } } },
         },
+        _count: { select: { favorites: true } },
       },
-      orderBy: [
-        // Priority search results first (if applicable)
-        { plan: { tier: "desc" } },
-        // Then by publication date
-        { publishedAt: "desc" },
-      ],
+      orderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     });
@@ -113,6 +122,7 @@ export async function GET(request) {
       tags: business.tags.map((bt) => bt.tag),
       image: business.photos[0] || null,
       tier: business.plan?.slug || "free",
+      favoritesCount: business._count?.favorites ?? 0,
       // Tier-gated fields
       showContact: JSON.parse(business.plan?.features || "{}").SHOW_CONTACT,
       showWebsite: JSON.parse(business.plan?.features || "{}").SHOW_WEBSITE,
