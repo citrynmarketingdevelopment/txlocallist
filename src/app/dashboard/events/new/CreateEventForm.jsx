@@ -1,218 +1,160 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
-
 import { createEventAction } from "@/app/actions/events";
+import styles from "./form.module.css";
 
-import styles from "@/app/portal.module.css";
+const INITIAL_STATE = { error: null, fieldErrors: {} };
 
-const INITIAL_STATE = {
-  error: "",
-  fieldErrors: {},
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
+export function CreateEventForm({ businesses = [] }) {
+  const [state, formAction, isPending] = useActionState(createEventAction, INITIAL_STATE);
 
   return (
-    <button type="submit" className={styles.submitButton} disabled={pending}>
-      {pending ? "Publishing event..." : "Publish event"}
-    </button>
-  );
-}
+    <form action={formAction} className={styles.form}>
+      {state?.error && (
+        <div className={styles.errorMessage}>{state.error}</div>
+      )}
 
-export function CreateEventForm({ tags }) {
-  const [state, formAction] = useActionState(createEventAction, INITIAL_STATE);
+      <div className={styles.step}>
+        <h2 className={styles.stepTitle}>Event Details</h2>
+        <p className={styles.stepDescription}>Tell people what is happening, where, and when.</p>
 
-  return (
-    <form action={formAction} className={styles.form} noValidate>
-      {state.error ? (
-        <p className={styles.errorBanner} aria-live="polite">
-          {state.error}
-        </p>
-      ) : null}
-
-      <div className={styles.formGrid}>
-        <div className={styles.field}>
-          <label htmlFor="imageUrl" className={styles.label}>
-            Event image URL
-          </label>
+        {/* Title */}
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="title">Event Title *</label>
           <input
-            id="imageUrl"
-            name="imageUrl"
-            type="url"
+            id="title" name="title" type="text"
             className={styles.input}
-            placeholder="https://images.example.com/event-poster.jpg"
+            placeholder="e.g. Austin Farmers Market"
             required
           />
-          {state.fieldErrors?.imageUrl ? (
-            <p className={styles.fieldError}>{state.fieldErrors.imageUrl}</p>
-          ) : null}
+          {state?.fieldErrors?.title && <p style={{ color: "var(--retro-red)", fontSize: "0.85rem" }}>{state.fieldErrors.title}</p>}
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="title" className={styles.label}>
-            Event title
-          </label>
-          <input
-            id="title"
-            name="title"
-            type="text"
-            className={styles.input}
-            placeholder="East Austin Night Market"
+        {/* Description */}
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="description">Description *</label>
+          <textarea
+            id="description" name="description" rows={4}
+            className={styles.textarea}
+            placeholder="Tell people what this event is about (at least 20 characters)..."
             required
           />
-          {state.fieldErrors?.title ? (
-            <p className={styles.fieldError}>{state.fieldErrors.title}</p>
-          ) : null}
+          {state?.fieldErrors?.description && <p style={{ color: "var(--retro-red)", fontSize: "0.85rem" }}>{state.fieldErrors.description}</p>}
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="addressName" className={styles.label}>
-            Address name
-          </label>
+        {/* Cover Image */}
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="imageUrl">Cover Image URL</label>
           <input
-            id="addressName"
-            name="addressName"
-            type="text"
+            id="imageUrl" name="imageUrl" type="url"
             className={styles.input}
-            placeholder="Republic Square"
-            required
+            placeholder="https://example.com/image.jpg"
           />
-          {state.fieldErrors?.addressName ? (
-            <p className={styles.fieldError}>{state.fieldErrors.addressName}</p>
-          ) : null}
+        </div>
+
+        {/* Dates */}
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="startDate">Start Date &amp; Time</label>
+            <input id="startDate" name="startDate" type="datetime-local" className={styles.input} />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="endDate">End Date &amp; Time</label>
+            <input id="endDate" name="endDate" type="datetime-local" className={styles.input} />
+          </div>
         </div>
       </div>
 
-      <div className={styles.field}>
-        <label htmlFor="description" className={styles.label}>
-          Description
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          className={styles.textarea}
-          placeholder="Describe the event, what to expect, and who it is for."
-          rows={6}
-          required
-        />
-        {state.fieldErrors?.description ? (
-          <p className={styles.fieldError}>{state.fieldErrors.description}</p>
-        ) : null}
-      </div>
+      <div className={styles.step}>
+        <h2 className={styles.stepTitle}>Location</h2>
 
-      <div className={styles.formGrid}>
-        <div className={styles.field}>
-          <label htmlFor="address" className={styles.label}>
-            Address
-          </label>
+        {/* Venue name */}
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="addressName">Venue Name</label>
           <input
-            id="address"
-            name="address"
-            type="text"
+            id="addressName" name="addressName" type="text"
             className={styles.input}
-            placeholder="422 Guadalupe St"
-            required
+            placeholder="e.g. Zilker Park, Convention Center"
           />
-          {state.fieldErrors?.address ? (
-            <p className={styles.fieldError}>{state.fieldErrors.address}</p>
-          ) : null}
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="zipCode" className={styles.label}>
-            ZIP code
-          </label>
+        {/* Street address */}
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="address">Street Address *</label>
           <input
-            id="zipCode"
-            name="zipCode"
-            type="text"
+            id="address" name="address" type="text"
+            className={styles.input}
+            placeholder="123 Main St"
+            required
+          />
+          {state?.fieldErrors?.address && <p style={{ color: "var(--retro-red)", fontSize: "0.85rem" }}>{state.fieldErrors.address}</p>}
+        </div>
+
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="city">City *</label>
+            <input
+              id="city" name="city" type="text"
+              className={styles.input}
+              placeholder="Austin"
+              required
+            />
+            {state?.fieldErrors?.city && <p style={{ color: "var(--retro-red)", fontSize: "0.85rem" }}>{state.fieldErrors.city}</p>}
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="state">State</label>
+            <input id="state" name="state" type="text" className={styles.input} defaultValue="TX" />
+          </div>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="zipCode">ZIP Code *</label>
+          <input
+            id="zipCode" name="zipCode" type="text"
             className={styles.input}
             placeholder="78701"
             required
           />
-          {state.fieldErrors?.zipCode ? (
-            <p className={styles.fieldError}>{state.fieldErrors.zipCode}</p>
-          ) : null}
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="city" className={styles.label}>
-            City
-          </label>
-          <input
-            id="city"
-            name="city"
-            type="text"
-            className={styles.input}
-            placeholder="Austin"
-            required
-          />
-          {state.fieldErrors?.city ? (
-            <p className={styles.fieldError}>{state.fieldErrors.city}</p>
-          ) : null}
+          {state?.fieldErrors?.zipCode && <p style={{ color: "var(--retro-red)", fontSize: "0.85rem" }}>{state.fieldErrors.zipCode}</p>}
         </div>
       </div>
 
-      <div className={styles.formGrid}>
-        <div className={styles.field}>
-          <label htmlFor="state" className={styles.label}>
-            State
-          </label>
-          <input
-            id="state"
-            name="state"
-            type="text"
-            className={styles.input}
-            placeholder="Texas"
-            required
-          />
-          {state.fieldErrors?.state ? (
-            <p className={styles.fieldError}>{state.fieldErrors.state}</p>
-          ) : null}
-        </div>
+      <div className={styles.step}>
+        <h2 className={styles.stepTitle}>Additional Info</h2>
 
-        <div className={styles.field}>
-          <label htmlFor="country" className={styles.label}>
-            Country
-          </label>
+        {/* Link to business */}
+        {businesses.length > 0 && (
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="businessId">Link to Your Business Listing (optional)</label>
+            <select id="businessId" name="businessId" className={styles.select}>
+              <option value="">— None —</option>
+              {businesses.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Tags */}
+        <div className={styles.formGroup}>
+          <label className={styles.label} htmlFor="tags">Tags (optional)</label>
           <input
-            id="country"
-            name="country"
-            type="text"
+            id="tags" name="tags" type="text"
             className={styles.input}
-            placeholder="United States"
-            required
+            placeholder="music, food, family, outdoor"
           />
-          {state.fieldErrors?.country ? (
-            <p className={styles.fieldError}>{state.fieldErrors.country}</p>
-          ) : null}
+          <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+            Separate tags with commas. Tags help people find your event.
+          </p>
         </div>
       </div>
 
-      <div className={styles.field}>
-        <span className={styles.label}>Tags</span>
-        <div className={styles.checkboxGrid}>
-          {tags.map((tag) => (
-            <label key={tag.id} className={styles.checkboxCard}>
-              <input type="checkbox" name="tagIds" value={tag.id} />
-              <span>{tag.name}</span>
-            </label>
-          ))}
-        </div>
-        {state.fieldErrors?.tagIds ? (
-          <p className={styles.fieldError}>{state.fieldErrors.tagIds}</p>
-        ) : null}
+      <div className={styles.formNavigation}>
+        <button type="submit" className={styles.buttonPrimary} disabled={isPending}>
+          {isPending ? "Publishing..." : "Publish Event"}
+        </button>
       </div>
-
-      <p className={styles.formHelper}>
-        Event images currently use hosted image URLs. Direct media upload can be
-        added later when object storage is in place.
-      </p>
-
-      <SubmitButton />
     </form>
   );
 }

@@ -1,10 +1,19 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { DashboardLayout } from "./DashboardLayout";
-import styles from "./dashboard.module.css";
+import { DashboardLayout } from "./DashboardShell";
+import { OverviewContent } from "./OverviewContent";
+import styles from "./overview.module.css";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { isMissingPrismaTableError, phase3SchemaMessage } from "@/lib/prisma-errors";
+
+function titleCase(value) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 /**
  * Main dashboard overview page.
@@ -57,6 +66,25 @@ export default async function DashboardPage() {
   };
 
   const recentBusinesses = businesses.slice(0, 5);
+  const firstBusinessName = businesses[0]?.name ?? null;
+  const firstNameFromEmail = user.email.split("@")[0]?.replace(/[._-]+/g, " ") ?? "neighbor";
+  const greetingName = firstBusinessName || titleCase(firstNameFromEmail);
+  const subtitle =
+    businesses.length > 0
+      ? `Your profile is shining bright. You currently have ${stats.active} active listing${stats.active === 1 ? "" : "s"}, ${stats.draft} draft${stats.draft === 1 ? "" : "s"}, and ${stats.paidPlans} paid plan${stats.paidPlans === 1 ? "" : "s"} in motion.`
+      : "Your dashboard is ready. Start with your first listing and build a stronger local presence across the directory.";
+
+  return (
+    <DashboardLayout activeTab="overview">
+      <OverviewContent
+        greetingName={greetingName}
+        recentBusinesses={recentBusinesses}
+        schemaNotice={schemaNotice}
+        stats={stats}
+        subtitle={subtitle}
+      />
+    </DashboardLayout>
+  );
 
   return (
     <DashboardLayout activeTab="overview">

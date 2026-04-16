@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { DashboardLayout } from "../DashboardLayout";
+import { DashboardLayout } from "../DashboardShell";
 import styles from "../dashboard.module.css";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { isMissingPrismaTableError, phase3SchemaMessage } from "@/lib/prisma-errors";
+import { publishBusinessFormAction } from "@/app/actions/businesses";
 
 /**
  * Dashboard businesses list page.
@@ -23,8 +24,10 @@ export default async function BusinessesPage({ searchParams }) {
     redirect("/post-your-business");
   }
 
+  // Next.js 16: searchParams is a Promise
+  const params = await searchParams;
   // Get status filter from query params (ACTIVE, DRAFT, PAUSED, ARCHIVED)
-  const statusFilter = searchParams?.status || null;
+  const statusFilter = params?.status || null;
 
   // Fetch businesses
   const where = { ownerId: user.id };
@@ -166,19 +169,29 @@ export default async function BusinessesPage({ searchParams }) {
                 </div>
                 <div className={styles.tableCol} style={{ flex: 1 }}>
                   <div className={styles.actionButtons}>
+                    {business.status === "DRAFT" && (
+                      <form action={publishBusinessFormAction}>
+                        <input type="hidden" name="businessId" value={business.id} />
+                        <button type="submit" className={styles.publishButton}>
+                          Publish
+                        </button>
+                      </form>
+                    )}
                     <Link
                       href={`/dashboard/businesses/${business.id}/edit`}
                       className={styles.actionButton}
                     >
                       Edit
                     </Link>
-                    <Link
-                      href={`/business/${business.slug}`}
-                      className={styles.actionButton}
-                      target="_blank"
-                    >
-                      View
-                    </Link>
+                    {business.status === "ACTIVE" && (
+                      <Link
+                        href={`/business/${business.slug}`}
+                        className={styles.actionButton}
+                        target="_blank"
+                      >
+                        View
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

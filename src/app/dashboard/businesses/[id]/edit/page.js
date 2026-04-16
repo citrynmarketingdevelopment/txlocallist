@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { DashboardLayout } from "../../../DashboardLayout";
+import { DashboardLayout } from "../../../DashboardShell";
 import { EditBusinessForm } from "./EditBusinessForm";
 import styles from "../../../dashboard.module.css";
 import { prisma } from "@/lib/prisma";
@@ -22,6 +22,9 @@ export default async function EditBusinessPage({ params }) {
     redirect("/post-your-business");
   }
 
+  // Next.js 16: params is a Promise — must be awaited
+  const { id } = await params;
+
   let business;
   let cities = [];
   let categories = [];
@@ -29,7 +32,7 @@ export default async function EditBusinessPage({ params }) {
 
   try {
     business = await prisma.business.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         city: true,
         categories: { include: { category: true } },

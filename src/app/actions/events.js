@@ -6,128 +6,110 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
-const MIN_TITLE_LENGTH = 3;
-const MIN_DESCRIPTION_LENGTH = 20;
-
-function getTextValue(formData, fieldName) {
-  return formData.get(fieldName)?.toString().trim() ?? "";
+function getTextValue(formData, key) {
+  return formData.get(key)?.toString().trim() ?? "";
 }
 
-function buildErrorState(error, fieldErrors = {}) {
-  return {
-    error,
-    fieldErrors,
-  };
+function slugifyTag(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
-function isValidHttpUrl(value) {
-  try {
-    const url = new URL(value);
-
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-export async function createEventAction(_prevState, formData) {
+/**
+ * Create a new event.
+ */
+export async function createEventAction(prevState, formData) {
   const user = await requireUser();
-  const imageUrl = getTextValue(formData, "imageUrl");
-  const title = getTextValue(formData, "title");
-  const description = getTextValue(formData, "description");
-  const addressName = getTextValue(formData, "addressName");
-  const address = getTextValue(formData, "address");
-  const zipCode = getTextValue(formData, "zipCode");
-  const city = getTextValue(formData, "city");
-  const state = getTextValue(formData, "state");
-  const country = getTextValue(formData, "country");
-  const tagIds = [...new Set(formData.getAll("tagIds").map((value) => value.toString()))];
+
+  const title        = getTextValue(formData, "title");
+  const description  = getTextValue(formData, "description");
+  const imageUrl     = getTextValue(formData, "imageUrl");
+  const addressName  = getTextValue(formData, "addressName");
+  const address      = getTextValue(formData, "address");
+  const zipCode      = getTextValue(formData, "zipCode");
+  const city         = getTextValue(formData, "city");
+  const state        = getTextValue(formData, "state") || "TX";
+  const country      = getTextValue(formData, "country") || "US";
+  const businessId   = getTextValue(formData, "businessId") || null;
+  const startDateRaw = getTextValue(formData, "startDate");
+  const endDateRaw   = getTextValue(formData, "endDate");
+  const tagsRaw      = getTextValue(formData, "tags");
+
+  // Validation
   const fieldErrors = {};
-
-  if (!isValidHttpUrl(imageUrl)) {
-    fieldErrors.imageUrl = "Enter a valid image URL that starts with http or https.";
-  }
-
-  if (title.length < MIN_TITLE_LENGTH) {
-    fieldErrors.title = `Use at least ${MIN_TITLE_LENGTH} characters for the title.`;
-  }
-
-  if (description.length < MIN_DESCRIPTION_LENGTH) {
-    fieldErrors.description = `Use at least ${MIN_DESCRIPTION_LENGTH} characters for the description.`;
-  }
-
-  if (!addressName) {
-    fieldErrors.addressName = "Enter the venue or address name.";
-  }
-
-  if (!address) {
-    fieldErrors.address = "Enter the street address.";
-  }
-
-  if (!zipCode) {
-    fieldErrors.zipCode = "Enter the ZIP or postal code.";
-  }
-
-  if (!city) {
-    fieldErrors.city = "Enter the city.";
-  }
-
-  if (!state) {
-    fieldErrors.state = "Enter the state.";
-  }
-
-  if (!country) {
-    fieldErrors.country = "Enter the country.";
-  }
-
-  if (tagIds.length === 0) {
-    fieldErrors.tagIds = "Select at least one tag for the event.";
-  }
+  if (!title || title.length < 3)       fieldErrors.title       = "Title must be at least 3 characters.";
+  if (!description || description.length < 20) fieldErrors.description = "Description must be at least 20 characters.";
+  if (!address)     fieldErrors.address     = "Street address is required.";
+  if (!city)        fieldErrors.city        = "City is required.";
+  if (!zipCode)     fieldErrors.zipCode     = "ZIP code is required.";
 
   if (Object.keys(fieldErrors).length > 0) {
-    return buildErrorState("Fix the highlighted fields and try again.", fieldErrors);
+    return { error: "Please fix the errors below.", fieldErrors };
   }
 
-  const selectedTags = await prisma.tag.findMany({
-    where: {
-      id: {
-        in: tagIds,
-      },
-    },
-    select: {
-      id: true,
-      slug: true,
-    },
-  });
+  // Parse tags (comma-separated names) — optional
+  const tagNames = tagsRaw
+    ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
 
-  if (selectedTags.length !== tagIds.length) {
-    return buildErrorState("One or more selected tags are no longer available.", {
-      tagIds: "Reload the page and select the tags again.",
+  const tagConnects = [];
+  for (const name of tagNames) {
+    const slug = slugifyTag(name);
+    const tag = await prisma.tag.upsert({
+      where: { slug },
+      create: { name, slug },
+      update: {},
     });
+    tagConnects.push({ id: tag.id });
   }
 
-  await prisma.event.create({
-    data: {
-      imageUrl,
-      title,
-      description,
-      addressName,
-      address,
-      zipCode,
-      city,
-      state,
-      country,
-      creatorId: user.id,
-      tags: {
-        connect: selectedTags.map((tag) => ({ id: tag.id })),
+  try {
+    await prisma.event.create({
+      data: {
+        title,
+        description,
+        imageUrl: imageUrl || "",
+        addressName: addressName || address,
+        address,
+        zipCode,
+        city,
+        state,
+        country,
+        creatorId: user.id,
+        businessId: businessId || null,
+        startDate: startDateRaw ? new Date(startDateRaw) : null,
+        endDate:   endDateRaw   ? new Date(endDateRaw)   : null,
+        status: "PUBLISHED",
+        ...(tagConnects.length > 0 ? { tags: { connect: tagConnects } } : {}),
       },
-    },
-  });
+    });
+  } catch (err) {
+    console.error("[createEventAction]", err);
+    return { error: "Failed to create event. Please try again." };
+  }
 
   revalidatePath("/events");
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/events");
+  redirect("/dashboard/events?created=1");
+}
 
-  redirect(
-    `/events?created=1&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`,
-  );
+/**
+ * Delete an event (owner or admin only).
+ */
+export async function deleteEventAction(formData) {
+  const user = await requireUser();
+  const eventId = formData.get("eventId")?.toString();
+  if (!eventId) return;
+
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) return;
+  if (event.creatorId !== user.id && user.role !== "ADMIN") return;
+
+  await prisma.event.delete({ where: { id: eventId } });
+
+  revalidatePath("/events");
+  revalidatePath("/dashboard/events");
+  redirect("/dashboard/events");
 }

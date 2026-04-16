@@ -1,0 +1,136 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ---- Photo grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md, 0.5rem);
+  overflow: hidden;
+  border: var(--stroke-thin, 2px solid #2D241E);
+  background: var(--bg-muted, #f5f0ea);
+}
+
+.thumbImg {
+  object-fit: cover;
+}
+
+.removeBtn {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--retro-red, #D64933);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: transform 0.15s ease;
+  z-index: 1;
+}
+
+.removeBtn:hover {
+  transform: scale(1.15);
+}
+
+.coverBadge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.65rem;
+  font-family: var(--font-accent, cursive);
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 0.2rem 0;
+  text-transform: uppercase;
+}
+
+/* ---- Hint ---- */
+.hint {
+  font-size: 0.8125rem;
+  color: var(--muted, #6A4A31);
+  margin: 0;
+}
+
+/* ---- Dropzone wrapper ---- */
+.dropzoneWrap {
+  border: 2px dashed var(--retro-brown-soft, #6A4A31);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.25rem;
+  transition: border-color 0.2s ease;
+}
+
+.dropzoneWrap:hover {
+  border-color: var(--retro-teal, #4A9D9C);
+}
+
+/* UploadThing appearance overrides (via className props) */
+.dropzoneContainer {
+  background: var(--bg-muted, #faf7f2);
+  border: none;
+  padding: 2rem 1rem;
+}
+
+.dropzoneIcon {
+  color: var(--retro-teal, #4A9D9C);
+}
+
+.dropzoneLabel {
+  color: var(--foreground, #2D241E);
+  font-family: var(--font-accent, cursive);
+  font-size: 0.9rem;
+}
+
+.dropzoneAllowed {
+  color: var(--muted, #6A4A31);
+  font-size: 0.75rem;
+}
+
+.dropzoneButton {
+  background: var(--retro-teal, #4A9D9C);
+  color: #fff;
+  font-family: var(--font-accent, cursive);
+  border-radius: var(--radius-pill, 9999px);
+  transform: rotate(-1deg);
+  transition: transform 0.15s ease;
+}
+
+.dropzoneButton:hover {
+  transform: rotate(0deg);
+}
+
+/* ---- Status messages ---- */
+.uploadingMsg {
+  color: var(--retro-teal, #4A9D9C);
+  font-size: 0.875rem;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.errorMsg {
+  color: var(--retro-red, #D64933);
+  font-size: 0.875rem;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}

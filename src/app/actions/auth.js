@@ -11,6 +11,7 @@ import {
   normalizeEmail,
   requireAdmin,
 } from "@/lib/auth/session";
+import { sendWelcomeEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { authSchemaMessage, isMissingPrismaTableError } from "@/lib/prisma-errors";
 
@@ -50,6 +51,8 @@ export async function signUpAction(_prevState, formData) {
   const email = normalizeEmail(getTextValue(formData, "email"));
   const password = formData.get("password")?.toString() ?? "";
   const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
+  // intent=owner upgrades signup role to OWNER and routes to dashboard
+  const intent = getTextValue(formData, "intent");
   const fieldErrors = validateCredentials({
     email,
     password,
@@ -84,12 +87,14 @@ export async function signUpAction(_prevState, formData) {
   const passwordHash = await hashPassword(password);
   let user;
 
+  const assignedRole = intent === "owner" ? "OWNER" : "USER";
+
   try {
     user = await prisma.user.create({
       data: {
         email,
         passwordHash,
-        role: "USER",
+        role: assignedRole,
       },
       select: {
         id: true,
@@ -108,6 +113,16 @@ export async function signUpAction(_prevState, formData) {
 
   if (!sessionCreated) {
     return buildErrorState(`${authSchemaMessage} Your account was created, but sign-in cannot start until the session table exists.`);
+  }
+
+  // Fire welcome email (non-blocking — don't fail signup if email fails)
+  sendWelcomeEmail({ to: email, isOwner: intent === "owner" }).catch((err) =>
+    console.error("[auth] welcome email failed:", err)
+  );
+
+  // New owners go straight to create their first listing
+  if (intent === "owner") {
+    redirect("/dashboard/businesses/new");
   }
 
   redirect(getDashboardPath(user.role));

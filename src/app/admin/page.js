@@ -1,293 +1,169 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
-
-import { logoutAction } from "@/app/actions/auth";
+import { AdminShell } from "./AdminShell";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { isMissingPrismaTableError, phase3SchemaMessage } from "@/lib/prisma-errors";
+import { isMissingPrismaTableError } from "@/lib/prisma-errors";
+import styles from "@/app/dashboard/dashboard.module.css";
 
-import styles from "../portal.module.css";
-import { AdminCreateForm } from "./AdminCreateForm";
-import { TagCreateForm } from "./TagCreateForm";
-
-function formatDate(value) {
-  if (!value) {
-    return "Not yet";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+function formatDate(val) {
+  if (!val) return "Never";
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(val));
 }
 
-export default async function AdminPage() {
-  const adminUser = await requireAdmin();
-  const now = new Date();
-  let dashboardData;
+export default async function AdminOverviewPage() {
+  const admin = await requireAdmin();
+
+  let stats = { users: 0, owners: 0, businesses: 0, activeBusinesses: 0, events: 0 };
+  let recentUsers = [];
+  let recentBusinesses = [];
+  let schemaNotice = null;
 
   try {
-    dashboardData = await prisma.$transaction([
-      prisma.user.count(),
-      prisma.user.count({ where: { role: "ADMIN" } }),
-      prisma.session.count({ where: { expiresAt: { gt: now } } }),
-      prisma.tag.count(),
-      prisma.user.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 8,
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          createdAt: true,
-          lastLoginAt: true,
-        },
-      }),
-      prisma.tag.findMany({
-        orderBy: { name: "asc" },
-        take: 16,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          createdAt: true,
-          _count: {
-            select: {
-              businessTags: true,
-            },
-          },
-        },
-      }),
-    ]);
+    const [userCount, ownerCount, bizCount, activeBizCount, recentUsersData, recentBizData] =
+      await prisma.$transaction([
+        prisma.user.count(),
+        prisma.user.count({ where: { role: "OWNER" } }),
+        prisma.business.count(),
+        prisma.business.count({ where: { status: "ACTIVE" } }),
+        prisma.user.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 6,
+          select: { id: true, email: true, role: true, createdAt: true, lastLoginAt: true },
+        }),
+        prisma.business.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 6,
+          include: { city: true, owner: { select: { email: true } } },
+        }),
+      ]);
+
+    stats = { users: userCount, owners: ownerCount, businesses: bizCount, activeBusinesses: activeBizCount };
+    recentUsers = recentUsersData;
+    recentBusinesses = recentBizData;
+
+    // Events may not exist yet
+    try {
+      stats.events = await prisma.event.count();
+    } catch (_) {}
   } catch (error) {
-    if (!isMissingPrismaTableError(error)) {
+    if (isMissingPrismaTableError(error)) {
+      schemaNotice = "Database schema not fully applied. Run npm run db:push.";
+    } else {
       throw error;
     }
-
-    return (
-      <main className={styles.page}>
-        <section className={styles.shell}>
-          <header className={styles.header}>
-            <p className={styles.eyebrow}>TX Local List // Admin Dashboard</p>
-            <div className={styles.titleRow}>
-              <div>
-                <h1 className={styles.title}>Admin setup needs one more step.</h1>
-                <p className={styles.copy}>
-                  Signed in as {adminUser.email}. The admin route is protected,
-                  but the current database has not fully caught up to the new schema.
-                </p>
-              </div>
-              <div className={styles.actions}>
-                <Link href="/dashboard" className={styles.secondaryLink}>
-                  User dashboard
-                </Link>
-                <form action={logoutAction}>
-                  <button type="submit" className={styles.ghostButton}>
-                    Log out
-                  </button>
-                </form>
-              </div>
-            </div>
-          </header>
-
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <h2 className={styles.sectionTitle}>Database sync required</h2>
-                <p className={styles.sectionCopy}>
-                  {phase3SchemaMessage} Apply the Prisma schema update, then refresh this page.
-                </p>
-              </div>
-            </div>
-          </section>
-        </section>
-      </main>
-    );
   }
 
-  const [userCount, adminCount, activeSessionCount, tagCount, recentUsers, tags] =
-    dashboardData;
-
   return (
-    <main className={styles.page}>
-      <section className={styles.shell}>
-        <header className={styles.header}>
-          <p className={styles.eyebrow}>TX Local List // Admin Dashboard</p>
-          <div className={styles.titleRow}>
-            <div>
-              <h1 className={styles.title}>Control access from the server.</h1>
-              <p className={styles.copy}>
-                Signed in as {adminUser.email}. This route only renders for
-                admins and pulls its metrics directly from Prisma.
-              </p>
-            </div>
+    <AdminShell activeTab="overview">
+      <div className={styles.pageHeader}>
+        <div>
+          <h1 className={styles.pageTitle}>Platform Overview</h1>
+          <p className={styles.pageSubtitle}>Real-time stats for TX Localist</p>
+        </div>
+      </div>
 
-            <div className={styles.actions}>
-              <Link href="/dashboard" className={styles.secondaryLink}>
-                User dashboard
-              </Link>
-              <Link href="/" className={styles.secondaryLink}>
-                Back home
-              </Link>
-              <form action={logoutAction}>
-                <button type="submit" className={styles.ghostButton}>
-                  Log out
-                </button>
-              </form>
+      {schemaNotice && (
+        <div className={styles.card}>
+          <div className={styles.emptyState}>
+            <h2 className={styles.emptyStateTitle}>Schema Not Ready</h2>
+            <p className={styles.emptyStateDescription}>{schemaNotice}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Stats grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+        {[
+          { label: "Total Users",      value: stats.users,            icon: "group",      color: "var(--retro-teal)" },
+          { label: "Business Owners",  value: stats.owners,           icon: "storefront", color: "var(--retro-orange)" },
+          { label: "All Listings",     value: stats.businesses,       icon: "list_alt",   color: "var(--retro-brown)" },
+          { label: "Live Listings",    value: stats.activeBusinesses, icon: "check_circle", color: "var(--retro-teal)" },
+          { label: "Events",           value: stats.events,           icon: "event",      color: "var(--retro-red)" },
+        ].map((s) => (
+          <div key={s.label} className={styles.card} style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <span className="material-icons" style={{ fontSize: "1.75rem", color: s.color }}>{s.icon}</span>
+            <p style={{ fontSize: "2rem", fontWeight: 800, color: "var(--retro-brown)", margin: 0 }}>{s.value}</p>
+            <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick links */}
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2rem" }}>
+        {[
+          { href: "/admin/businesses", label: "Moderate Listings", icon: "storefront" },
+          { href: "/admin/users",      label: "Manage Users",      icon: "group" },
+          { href: "/admin/events",     label: "Review Events",     icon: "event" },
+          { href: "/admin/tags",       label: "Manage Tags",       icon: "label" },
+          { href: "/admin/settings",   label: "Create Admin",      icon: "admin_panel_settings" },
+        ].map((l) => (
+          <Link key={l.href} href={l.href} className={styles.createButton} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <span className="material-icons" style={{ fontSize: "1rem" }}>{l.icon}</span>
+            {l.label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Recent users */}
+      {recentUsers.length > 0 && (
+        <>
+          <div className={styles.pageHeader} style={{ marginTop: "1rem" }}>
+            <h2 className={styles.pageTitle} style={{ fontSize: "1.25rem" }}>Recent Users</h2>
+            <Link href="/admin/users" className={styles.actionButton}>View All</Link>
+          </div>
+          <div className={styles.businessesTable}>
+            <div className={styles.tableHeader}>
+              <div className={styles.tableCol} style={{ flex: 2 }}>Email</div>
+              <div className={styles.tableCol} style={{ flex: 1 }}>Role</div>
+              <div className={styles.tableCol} style={{ flex: 1 }}>Joined</div>
+              <div className={styles.tableCol} style={{ flex: 1 }}>Last Login</div>
+            </div>
+            <div className={styles.tableBody}>
+              {recentUsers.map((u) => (
+                <div key={u.id} className={styles.tableRow}>
+                  <div className={styles.tableCol} style={{ flex: 2 }}><p className={styles.businessName}>{u.email}</p></div>
+                  <div className={styles.tableCol} style={{ flex: 1 }}>
+                    <span className={u.role === "ADMIN" ? styles.statusACTIVE : styles.statusDRAFT}>{u.role}</span>
+                  </div>
+                  <div className={styles.tableCol} style={{ flex: 1 }}>{formatDate(u.createdAt)}</div>
+                  <div className={styles.tableCol} style={{ flex: 1 }}>{formatDate(u.lastLoginAt)}</div>
+                </div>
+              ))}
             </div>
           </div>
-        </header>
+        </>
+      )}
 
-        <section className={styles.cardGrid}>
-          <article className={styles.card}>
-            <p className={styles.cardLabel}>Users</p>
-            <p className={styles.cardValue}>{userCount}</p>
-            <p className={styles.cardNote}>
-              Total registered accounts across every role.
-            </p>
-          </article>
-
-          <article className={styles.card}>
-            <p className={styles.cardLabel}>Admins</p>
-            <p className={styles.cardValue}>{adminCount}</p>
-            <p className={styles.cardNote}>
-              Admin users come from the seed flow or this dashboard.
-            </p>
-          </article>
-
-          <article className={styles.card}>
-            <p className={styles.cardLabel}>Active sessions</p>
-            <p className={styles.cardValue}>{activeSessionCount}</p>
-            <p className={styles.cardNote}>
-              Session records stay revocable because the browser only holds an
-              opaque cookie token.
-            </p>
-          </article>
-
-          <article className={styles.card}>
-            <p className={styles.cardLabel}>Directory tags</p>
-            <p className={styles.cardValue}>{tagCount}</p>
-            <p className={styles.cardNote}>
-              Shared tags available for listings and future taxonomy controls.
-            </p>
-          </article>
-        </section>
-
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Create admin account</h2>
-              <p className={styles.sectionCopy}>
-                This is the only in-app location that can create new admin
-                credentials. Public signup stays limited to standard users.
-              </p>
+      {/* Recent businesses */}
+      {recentBusinesses.length > 0 && (
+        <>
+          <div className={styles.pageHeader} style={{ marginTop: "2rem" }}>
+            <h2 className={styles.pageTitle} style={{ fontSize: "1.25rem" }}>Recent Listings</h2>
+            <Link href="/admin/businesses" className={styles.actionButton}>View All</Link>
+          </div>
+          <div className={styles.businessesTable}>
+            <div className={styles.tableHeader}>
+              <div className={styles.tableCol} style={{ flex: 2 }}>Business</div>
+              <div className={styles.tableCol} style={{ flex: 1 }}>Owner</div>
+              <div className={styles.tableCol} style={{ flex: 1 }}>City</div>
+              <div className={styles.tableCol} style={{ flex: 1 }}>Status</div>
+            </div>
+            <div className={styles.tableBody}>
+              {recentBusinesses.map((b) => (
+                <div key={b.id} className={styles.tableRow}>
+                  <div className={styles.tableCol} style={{ flex: 2 }}><p className={styles.businessName}>{b.name}</p></div>
+                  <div className={styles.tableCol} style={{ flex: 1 }}><p className={styles.businessMeta}>{b.owner.email}</p></div>
+                  <div className={styles.tableCol} style={{ flex: 1 }}>{b.city?.name ?? "—"}</div>
+                  <div className={styles.tableCol} style={{ flex: 1 }}>
+                    <span className={styles["status" + b.status]}>{b.status}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-
-          <AdminCreateForm />
-        </section>
-
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Create directory tag</h2>
-              <p className={styles.sectionCopy}>
-                Manage reusable tags that can be attached across the directory.
-              </p>
-            </div>
-          </div>
-
-          <TagCreateForm />
-        </section>
-
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Directory tags</h2>
-              <p className={styles.sectionCopy}>
-                Existing tags and how many business records currently use each one.
-              </p>
-            </div>
-          </div>
-
-          {tags.length === 0 ? (
-            <p className={styles.emptyState}>
-              No tags exist yet. Create one above or run the tag seed script.
-            </p>
-          ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Slug</th>
-                    <th>Businesses</th>
-                    <th>Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tags.map((tag) => (
-                    <tr key={tag.id}>
-                      <td>{tag.name}</td>
-                      <td>{tag.slug}</td>
-                      <td>{tag._count.businessTags}</td>
-                      <td>{formatDate(tag.createdAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Recent users</h2>
-              <p className={styles.sectionCopy}>
-                Latest accounts with role and last sign-in visibility.
-              </p>
-            </div>
-          </div>
-
-          {recentUsers.length === 0 ? (
-            <p className={styles.emptyState}>
-              No users exist yet. Run the admin seed, then create user accounts
-              through `/signup`.
-            </p>
-          ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Created</th>
-                    <th>Last sign-in</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.email}</td>
-                      <td>
-                        <span
-                          className={`${styles.rolePill} ${
-                            user.role === "ADMIN" ? styles.adminRole : styles.userRole
-                          }`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-                      <td>{formatDate(user.createdAt)}</td>
-                      <td>{formatDate(user.lastLoginAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </section>
-    </main>
+        </>
+      )}
+    </AdminShell>
   );
 }

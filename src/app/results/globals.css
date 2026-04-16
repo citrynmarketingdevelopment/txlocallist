@@ -325,17 +325,30 @@
   line-height: 1.2;
 }
 
-/* Header Refinements */
-.header-title-wrapper {
-  display: block;
-  flex: 0 0 320px;
+/* Sidebar Category Shortcuts */
+.sidebar-cat-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  opacity: 0.45;
+  margin-bottom: 0.25rem;
+}
+
+.sidebar-cat-btn {
+  /* reset button */
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.13s ease, transform 0.13s ease;
+}
+
+.sidebar-cat-btn:hover {
+  opacity: 0.8;
+  transform: translateX(3px);
 }
 
 @media (max-width: 1200px) {
-  .header-title-wrapper {
-    display: none;
-  }
-
   .main-layout {
     grid-template-columns: 1fr;
   }

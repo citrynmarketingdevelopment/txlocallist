@@ -2,88 +2,122 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import styles from "./SearchBar.module.css";
 
 /**
- * Hero search bar (keyword + city/zip). Submits to `/search?q=&loc=` by default.
+ * Unified search bar — keyword | type toggle | location
+ * Matches the pill design with Business Listings / Local Events toggles.
  *
  * Props:
- *   - action:           form action path (default "/search")
- *   - method:           "GET" (default) or "POST"
- *   - initialQuery:     prefill for the keyword input
- *   - initialLocation:  prefill for the location input
- *   - onSubmit:         optional override handler ({ query, location })
- *   - variant:          "hero" (default, rotated chunky) | "inline"
+ *   action           – destination route (default "/results")
+ *   initialQuery     – prefill keyword
+ *   initialLocation  – prefill location (default "Austin, TX")
+ *   initialType      – "businesses" | "events"
+ *   variant          – "hero" (rotated) | "inline" (flat)
+ *   onSubmit         – optional override handler({ query, location, type })
  */
 export default function SearchBar({
-  action = "/search",
-  method = "GET",
-  initialQuery = "",
+  action          = "/results",
+  initialQuery    = "",
   initialLocation = "",
+  initialType     = "businesses",
+  variant         = "hero",
   onSubmit,
-  variant = "hero",
 }) {
   const router = useRouter();
-  const [query, setQuery] = useState(initialQuery);
-  const [location, setLocation] = useState(initialLocation);
+  const [query,    setQuery]    = useState(initialQuery);
+  const [location, setLocation] = useState(initialLocation || "Austin, TX");
+  const [type,     setType]     = useState(initialType);
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-
+  function submit() {
     if (onSubmit) {
-      onSubmit({ query, location });
+      onSubmit({ query, location, type });
       return;
     }
-
     const params = new URLSearchParams();
-    if (query) params.set("q", query);
+    if (query)    params.set("q",   query);
     if (location) params.set("loc", location);
+    params.set("tab", type);
+    router.push(action + "?" + params.toString());
+  }
 
-    router.push(`${action}${params.toString() ? `?${params.toString()}` : ""}`);
-  };
+  function handleKeyDown(e) {
+    if (e.key === "Enter") submit();
+  }
+
+  function selectType(t) {
+    setType(t);
+    // If there's already a query, re-run search with new type
+    if (query || location) {
+      if (onSubmit) {
+        onSubmit({ query, location, type: t });
+      } else {
+        const params = new URLSearchParams();
+        if (query)    params.set("q",   query);
+        if (location) params.set("loc", location);
+        params.set("tab", t);
+        router.push(action + "?" + params.toString());
+      }
+    }
+  }
 
   return (
-    <form
-      className={`${styles.searchContainer} ${variant === "inline" ? styles.inline : ""}`.trim()}
-      role="search"
-      action={action}
-      method={method}
-      onSubmit={handleSubmit}
-    >
-      <label className={styles.searchInput}>
-        <span className="sr-only">What are you looking for?</span>
-        <span className={`material-icons ${styles.searchIcon}`} aria-hidden="true">
-          search
-        </span>
+    <div className={[styles.pill, variant === "hero" ? styles.hero : styles.inline].join(" ")}>
+      {/* ── Keyword input ── */}
+      <div className={styles.queryWrap}>
+        <span className={"material-icons " + styles.queryIcon}>search</span>
         <input
-          name="q"
-          placeholder="What are you looking for?"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search spots, festivals, or towns..."
           autoComplete="off"
+          className={styles.queryInput}
+          name="q"
         />
-      </label>
+      </div>
 
-      <label className={styles.searchInput}>
-        <span className="sr-only">City or Zip</span>
-        <span className={`material-icons ${styles.searchIcon}`} aria-hidden="true">
-          location_on
-        </span>
+      <div className={styles.divider} />
+
+      {/* ── Location ── */}
+      <div className={styles.locationWrap}>
+        <span className={"material-icons " + styles.locationIcon}>location_on</span>
         <input
-          name="loc"
-          placeholder="City or Zip"
           type="text"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="City or Zip"
           autoComplete="off"
+          className={styles.locationInput}
+          name="loc"
         />
-      </label>
+      </div>
 
-      <button type="submit" className={styles.searchButton}>
-        GO!
-      </button>
-    </form>
+      <div className={styles.divider} />
+
+      {/* ── Type toggle ── */}
+      <div className={styles.typeGroup}>
+        <button
+          type="button"
+          onClick={() => selectType("businesses")}
+          aria-pressed={type === "businesses"}
+          className={[styles.typeBtn, type === "businesses" ? styles.bizActive : ""].join(" ")}
+        >
+          <span className={"material-icons " + styles.typeBtnIcon}>storefront</span>
+          Business Listings
+        </button>
+        <button
+          type="button"
+          onClick={() => selectType("events")}
+          aria-pressed={type === "events"}
+          className={[styles.typeBtn, type === "events" ? styles.evtActive : ""].join(" ")}
+        >
+          <span className={"material-icons " + styles.typeBtnIcon}>event</span>
+          Local Events
+        </button>
+      </div>
+    </div>
   );
 }

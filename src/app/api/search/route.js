@@ -42,11 +42,16 @@ export async function GET(request) {
     };
 
     // Filter by city
+    // Strip common state suffixes like ", TX" / ", tx" / " TX" before matching
+    // so "Austin, TX" and "Austin, tx" resolve the same as "Austin".
     if (loc) {
+      const cityOnly = loc
+        .replace(/,?\s+[a-zA-Z]{2}$/, "") // strip ", TX" or " TX" at the end
+        .trim();
       where.city = {
         OR: [
-          { slug: loc.toLowerCase().replace(/\s+/g, "-") },
-          { name: { mode: "insensitive", contains: loc } },
+          { slug: cityOnly.toLowerCase().replace(/\s+/g, "-") },
+          { name: { mode: "insensitive", contains: cityOnly } },
         ],
       };
     }

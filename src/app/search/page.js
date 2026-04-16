@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { Navbar, Footer } from "@/components";
@@ -11,33 +12,22 @@ export const metadata = {
 };
 
 /**
- * Search page wrapper. The actual search logic is in SearchResultsContent
- * which is a client component for handling state and API calls.
+ * /search — redirects to /results preserving all query params.
+ * The canonical search URL is /results; this keeps old links working.
  */
-export default function SearchPage({ searchParams }) {
-  const query = searchParams.q || "";
-  const location = searchParams.loc || "";
-  const category = searchParams.category || "";
-  const page = searchParams.page ? parseInt(searchParams.page) : 1;
+export default async function SearchPage({ searchParams }) {
+  const params = await searchParams;
 
-  return (
-    <>
-      <Navbar />
+  // If the user landed on /search directly (not rendered as /results),
+  // redirect to /results so the address bar shows the right URL.
+  const qs = new URLSearchParams();
+  if (params.q)        qs.set("q",        params.q);
+  if (params.loc)      qs.set("loc",      params.loc);
+  if (params.category) qs.set("category", params.category);
+  if (params.page)     qs.set("page",     params.page);
 
-      <main className={styles.container}>
-        <Suspense fallback={<SearchPageSkeleton />}>
-          <SearchResultsContent
-            initialQuery={query}
-            initialLocation={location}
-            initialCategory={category}
-            initialPage={page}
-          />
-        </Suspense>
-      </main>
-
-      <Footer />
-    </>
-  );
+  const dest = `/results${qs.toString() ? `?${qs.toString()}` : ""}`;
+  redirect(dest);
 }
 
 function SearchPageSkeleton() {

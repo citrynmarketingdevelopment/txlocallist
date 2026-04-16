@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import formStyles from "./form.module.css";
 import { createBusinessFromFormAction, publishBusinessAction } from "@/app/actions/businesses";
+import { PhotoUploader } from "@/components/PhotoUploader";
 
 /**
  * Multi-step business creation form.
@@ -129,6 +130,7 @@ export function CreateBusinessForm({ cities, categories }) {
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        photos: formData.photos,
       });
 
       if (!result.success) {
@@ -391,17 +393,21 @@ export function CreateBusinessForm({ cities, categories }) {
         </div>
       )}
 
-      {/* Step 4: Photos Placeholder */}
+      {/* Step 4: Photos */}
       {step === 4 && (
         <div className={formStyles.step}>
-          <h2 className={formStyles.stepTitle}>Photos (Coming Soon)</h2>
+          <h2 className={formStyles.stepTitle}>Photos</h2>
           <p className={formStyles.stepDescription}>
-            Photo uploads will be available in Phase 5
+            Add photos to make your listing stand out. Your first photo becomes the cover image.
+            Free listings include 1 photo — upgrade your plan to add more.
           </p>
-          <div className={formStyles.photoPlaceholder}>
-            <p>📸 Photo upload functionality coming soon</p>
-            <p>You&apos;ll be able to add and manage photos after creating your listing.</p>
-          </div>
+          <PhotoUploader
+            photos={formData.photos}
+            onChange={(photos) =>
+              setFormData((prev) => ({ ...prev, photos }))
+            }
+            maxPhotos={1}
+          />
         </div>
       )}
 

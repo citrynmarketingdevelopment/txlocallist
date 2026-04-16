@@ -603,6 +603,24 @@
   transform: translateY(-2px);
 }
 
+.publishButton {
+  padding: 0.5rem 1rem;
+  background-color: #2a9d6e;
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all var(--dur-sm) var(--ease-snap);
+  display: inline-block;
+}
+
+.publishButton:hover {
+  background-color: #218657;
+  transform: translateY(-2px);
+}
+
 .createButton {
   display: inline-block;
   padding: 0.875rem 2rem;
@@ -870,7 +888,7 @@
   font-weight: bold;
   cursor: pointer;
   transition: all var(--dur-sm) var(--ease-snap);
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 .settingButton {
@@ -879,17 +897,43 @@
 }
 
 .settingButton:hover {
-  background-color: var(--retro-orange);
-  transform: translateY(-2px);
+  background-color: var(--retro-brown);
 }
 
 .dangerButton {
   background-color: var(--retro-red);
   color: white;
-  width: 100%;
 }
 
 .dangerButton:hover {
-  background-color: #8b3429;
-  transform: translateY(-2px);
+  background-color: #b03020;
+}
+
+/* ── Events / success / delete utilities ────────────────── */
+
+.successBanner {
+  padding: 1rem 1.5rem;
+  background-color: rgba(74, 157, 156, 0.12);
+  border-left: 4px solid var(--retro-teal);
+  border-radius: var(--radius-md);
+  color: var(--retro-teal);
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.deleteButton {
+  padding: 0.4rem 0.9rem;
+  background-color: rgba(214, 73, 51, 0.1);
+  color: var(--retro-red);
+  border: 1px solid var(--retro-red);
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-sm) var(--ease-snap);
+}
+
+.deleteButton:hover {
+  background-color: var(--retro-red);
+  color: white;
 }

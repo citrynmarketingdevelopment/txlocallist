@@ -33,7 +33,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: business.name,
       description: business.description,
-      type: "business.business",
+      type: "website",
     },
   };
 }

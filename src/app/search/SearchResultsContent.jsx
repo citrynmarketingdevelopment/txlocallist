@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { SearchBar, BusinessCard } from "@/components";
+import SearchBar from "@/components/SearchBar";
+import BusinessCard from "@/components/BusinessCard";
 import styles from "./page.module.css";
 
 /**
@@ -88,7 +89,7 @@ export function SearchResultsContent({
     const params = new URLSearchParams();
     if (newQuery) params.set("q", newQuery);
     if (newLocation) params.set("loc", newLocation);
-    router.push(`/search?${params.toString()}`);
+    router.push(`/results?${params.toString()}`);
   }
 
   function handlePreviousPage() {

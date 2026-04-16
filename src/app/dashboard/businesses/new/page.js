@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { DashboardLayout } from "../../DashboardLayout";
+import { DashboardLayout } from "../../DashboardShell";
 import { CreateBusinessForm } from "./CreateBusinessForm";
 import styles from "../../dashboard.module.css";
 import { prisma } from "@/lib/prisma";

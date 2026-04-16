@@ -65,6 +65,9 @@ model User {
   // Owner info (only filled if role includes OWNER)
   ownedBusinesses Business[]
 
+  // Events created by this user
+  events       Event[]
+
   // Session management
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
@@ -131,6 +134,7 @@ model Tag {
 
   // Relations
   businessTags BusinessTag[]
+  events       Event[]
 
   @@index([slug])
 }
@@ -207,6 +211,7 @@ model Business {
   socialLinks     SocialLink[]
   jobs            Job[]
   favorites       Favorite[]
+  events          Event[]
 
   @@unique([slug, cityId]) // slug is unique per city, not global
   @@index([ownerId])
@@ -365,4 +370,55 @@ model AuditLog {
 
   @@index([entityId])
   @@index([createdAt])
+}
+
+// =============================================================================
+// EVENTS
+// =============================================================================
+
+model Event {
+  id          String   @id @default(cuid())
+
+  title       String
+  description String
+  imageUrl    String
+
+  // Venue / location
+  addressName String
+  address     String
+  zipCode     String
+  city        String
+  state       String
+  country     String   @default("US")
+
+  // Optional link to a Business listing
+  businessId  String?
+  business    Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  // Creator
+  creatorId   String
+  creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Tags (reuse existing Tag table via join)
+  tags        Tag[]
+
+  // Schedule (optional for future use)
+  startDate   DateTime?
+  endDate     DateTime?
+
+  status      EventStatus @default(PUBLISHED)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([city, state])
+  @@index([creatorId])
+  @@index([businessId])
+  @@index([status, createdAt])
+}
+
+enum EventStatus {
+  PUBLISHED
+  DRAFT
+  CANCELLED
 }

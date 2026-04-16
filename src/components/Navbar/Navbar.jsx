@@ -1,27 +1,30 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { getCurrentUser } from "@/lib/auth/session";
 import logo from "@/app/assets/Tx-Localist-01.png";
 import styles from "./Navbar.module.css";
 
+const DEFAULT_LINKS = [
+  { href: "/results", label: "EXPLORE" },
+  { href: "/pricing",            label: "PRICING" },
+  { href: "/post-your-business", label: "ADD LISTING" },
+];
+
 /**
- * Top navigation used on public marketing pages.
+ * Top navigation — server component, auth-aware.
  *
  * Props:
- *   - links:        array of { href, label } for the primary links
- *   - loginHref:    href for the login pill
- *   - loginLabel:   text for the login pill (default "LOGIN")
- *   - onMenuOpen:   optional handler for the mobile menu button
+ *   - links:      array of { href, label } overrides (defaults to DEFAULT_LINKS)
+ *   - onMenuOpen: optional handler for the mobile menu button
  */
-export default function Navbar({
-  links = [
-    { href: "/search", label: "EXPLORE" },
-    { href: "/post-your-business", label: "ADD LISTING" },
-  ],
-  loginHref = "/login",
-  loginLabel = "LOGIN",
-  onMenuOpen,
-}) {
+export default async function Navbar({ links = DEFAULT_LINKS, onMenuOpen }) {
+  const user = await getCurrentUser().catch(() => null);
+
+  const pillHref  = user ? "/dashboard" : "/login";
+  const pillLabel = user ? "DASHBOARD"  : "LOGIN";
+  const pillClass = user ? styles.navDashboardButton : styles.navLoginButton;
+
   return (
     <nav className={styles.nav} aria-label="Primary">
       <div className={styles.navBrand}>
@@ -44,11 +47,11 @@ export default function Navbar({
           </Link>
         ))}
         <Link
-          href={loginHref}
-          className={styles.navLoginButton}
-          aria-label={`${loginLabel} to your account`}
+          href={pillHref}
+          className={pillClass}
+          aria-label={pillLabel}
         >
-          {loginLabel}
+          {pillLabel}
         </Link>
       </div>
 

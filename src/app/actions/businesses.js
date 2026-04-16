@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth/session";
+import { sendListingPublishedEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 
 const MIN_NAME_LENGTH = 3;
@@ -266,7 +267,13 @@ export async function publishBusinessAction(businessId) {
 
   const business = await prisma.business.findUnique({
     where: { id: businessId },
-    select: { ownerId: true, status: true, slug: true },
+    select: {
+      ownerId: true,
+      status: true,
+      slug: true,
+      name: true,
+      owner: { select: { email: true } },
+    },
   });
 
   if (!business) {
@@ -292,6 +299,15 @@ export async function publishBusinessAction(businessId) {
   revalidatePath(`/business/${business.slug}`);
   revalidatePath("/search");
   revalidatePath("/dashboard/businesses");
+
+  // Notify the owner their listing is live (non-blocking)
+  if (business.owner?.email) {
+    sendListingPublishedEmail({
+      to: business.owner.email,
+      businessName: business.name,
+      businessSlug: business.slug,
+    }).catch((err) => console.error("[businesses] publish email failed:", err));
+  }
 
   return { success: true, message: "Business published successfully!" };
 }
@@ -488,6 +504,17 @@ export async function createBusinessFromFormAction(data) {
                 })),
               }
             : undefined,
+        // Attach uploaded photos
+        photos:
+          data.photos && data.photos.length > 0
+            ? {
+                create: data.photos.map((photo, i) => ({
+                  url: photo.url,
+                  alt: photo.name || data.name?.trim() || "",
+                  order: i,
+                })),
+              }
+            : undefined,
       },
     });
 
@@ -631,4 +658,16 @@ export async function updateBusinessAction(businessId, data) {
     console.error("Error updating business:", error);
     return { success: false, message: "Failed to update business. Please try again." };
   }
+}
+
+/**
+ * Publish a business from a plain <form> action (reads businessId from FormData).
+ * Used on the dashboard businesses list so DRAFT listings can be published
+ * with a single button click from a server-rendered page.
+ */
+export async function publishBusinessFormAction(formData) {
+  const businessId = formData.get("businessId")?.toString();
+  if (!businessId) return;
+  await publishBusinessAction(businessId);
+  redirect("/dashboard/businesses");
 }

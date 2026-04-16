@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Navbar, Footer, SearchBar, BusinessCard, Button } from "@/components";
+import { Navbar, Footer, SearchBar, BusinessCard, Button, CategoryPills } from "@/components";
 import styles from "./home.module.css";
 
 export const metadata = {
@@ -99,13 +99,14 @@ export default function Home() {
             <span className={styles.heroUnderline}>Fast.</span>
           </h1>
 
-          <SearchBar />
-
           <p className={styles.heroTagline}>
             The no-nonsense directory for the Lone Star State.{" "}
-            <br className="hidden md:block" />
             No ads. No tracking. Just Texas.
           </p>
+
+          <SearchBar action="/results" />
+
+          <CategoryPills />
         </section>
 
         {/* Features Strip */}
@@ -134,7 +135,7 @@ export default function Home() {
               Featured <br />
               <span className={styles.gemsTitleAccent}>Gems</span>
             </h2>
-            <Link href="/search" className={styles.gemsLink}>
+            <Link href="/results" className={styles.gemsLink}>
               SEE ALL BUSINESSES
             </Link>
           </div>
@@ -187,7 +188,7 @@ export default function Home() {
               Skip the <span className={styles.ctaAccent}>Noise.</span>
             </h2>
             <p className={styles.ctaTagline}>No ads. No nonsense. Just local.</p>
-            <Button as="link" href="/search" variant="cream" size="lg">
+            <Button as="link" href="/results" variant="cream" size="lg">
               START EXPLORING
             </Button>
           </div>

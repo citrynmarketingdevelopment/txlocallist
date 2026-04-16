@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { DashboardLayout } from "../DashboardLayout";
+import { DashboardLayout } from "../DashboardShell";
 import styles from "../dashboard.module.css";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";

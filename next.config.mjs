@@ -6,6 +6,15 @@ const nextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      // UploadThing CDN (ufs = UploadThing File Server)
+      {
+        protocol: "https",
+        hostname: "utfs.io",
+      },
+      {
+        protocol: "https",
+        hostname: "*.ufs.sh",
+      },
     ],
   },
 };

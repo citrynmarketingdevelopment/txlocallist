@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { DashboardLayout } from "../DashboardLayout";
+import { DashboardLayout } from "../DashboardShell";
 import styles from "../dashboard.module.css";
 import { getCurrentSession } from "@/lib/auth/session";
 

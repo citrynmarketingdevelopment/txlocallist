@@ -1,75 +1,54 @@
-import Link from "next/link";
-
-import { logoutAction } from "@/app/actions/auth";
-import { requireUser } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma";
-
-import styles from "@/app/portal.module.css";
+import { redirect } from "next/navigation";
+import { DashboardLayout } from "../../DashboardShell";
 import { CreateEventForm } from "./CreateEventForm";
+import styles from "../../dashboard.module.css";
+import { prisma } from "@/lib/prisma";
+import { getCurrentSession } from "@/lib/auth/session";
+import { isMissingPrismaTableError } from "@/lib/prisma-errors";
 
 export default async function NewEventPage() {
-  const user = await requireUser();
-  const tags = await prisma.tag.findMany({
-    orderBy: {
-      name: "asc",
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+  const session = await getCurrentSession();
+  if (!session?.user) redirect("/login");
+  const user = session.user;
+
+  let businesses = [];
+  let schemaNotice = null;
+
+  try {
+    businesses = await prisma.business.findMany({
+      where: { ownerId: user.id, status: "ACTIVE" },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  } catch (error) {
+    if (isMissingPrismaTableError(error)) {
+      schemaNotice = "The database schema is not ready. Run npm run db:push and reload.";
+    } else {
+      throw error;
+    }
+  }
 
   return (
-    <main className={styles.page}>
-      <section className={styles.shell}>
-        <header className={styles.header}>
-          <p className={styles.eyebrow}>TX Local List // Create Event</p>
-          <div className={styles.titleRow}>
-            <div>
-              <h1 className={styles.title}>Publish a local event.</h1>
-              <p className={styles.copy}>
-                Signed in as {user.email}. Add the event details, choose tags,
-                and publish it to the public events directory.
-              </p>
-            </div>
+    <DashboardLayout activeTab="events">
+      <div className={styles.pageHeader}>
+        <div>
+          <h1 className={styles.pageTitle}>Create Event</h1>
+          <p className={styles.pageSubtitle}>Post a local event to the directory</p>
+        </div>
+      </div>
 
-            <div className={styles.actions}>
-              <Link href="/events" className={styles.primaryLink}>
-                Browse events
-              </Link>
-              <Link href="/dashboard" className={styles.secondaryLink}>
-                Back to dashboard
-              </Link>
-              <form action={logoutAction}>
-                <button type="submit" className={styles.ghostButton}>
-                  Log out
-                </button>
-              </form>
-            </div>
+      {schemaNotice ? (
+        <div className={styles.card}>
+          <div className={styles.emptyState}>
+            <h2 className={styles.emptyStateTitle}>Schema Not Ready</h2>
+            <p className={styles.emptyStateDescription}>{schemaNotice}</p>
           </div>
-        </header>
-
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>Event details</h2>
-              <p className={styles.sectionCopy}>
-                Required fields include the event image, location data, and at
-                least one admin-managed tag.
-              </p>
-            </div>
-          </div>
-
-          {tags.length === 0 ? (
-            <p className={styles.emptyState}>
-              No event tags exist yet. Run the seed script so users have tags to
-              assign when creating events.
-            </p>
-          ) : (
-            <CreateEventForm tags={tags} />
-          )}
-        </section>
-      </section>
-    </main>
+        </div>
+      ) : (
+        <div className={styles.card}>
+          <CreateEventForm businesses={businesses} />
+        </div>
+      )}
+    </DashboardLayout>
   );
 }

@@ -22,11 +22,14 @@ function SubmitButton() {
   );
 }
 
-export function SignupForm() {
+export function SignupForm({ intent = "" }) {
   const [state, formAction] = useActionState(signUpAction, INITIAL_STATE);
 
   return (
     <form action={formAction} className={styles.form} noValidate>
+      {intent ? (
+        <input type="hidden" name="intent" value={intent} />
+      ) : null}
       {state.error ? (
         <p className={styles.errorBanner} aria-live="polite">
           {state.error}
