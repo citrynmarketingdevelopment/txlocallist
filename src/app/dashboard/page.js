@@ -29,9 +29,12 @@ export default async function DashboardPage() {
 
   const user = session.user;
 
-  // Only OWNER or ADMIN can access dashboard
+  if (user.role === "USER") {
+    redirect("/dashboard/favorites");
+  }
+
   if (user.role !== "OWNER" && user.role !== "ADMIN") {
-    redirect("/post-your-business");
+    redirect("/login");
   }
 
   let businesses = [];

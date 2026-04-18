@@ -178,6 +178,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .notificationButton {
@@ -234,6 +235,40 @@
   color: rgba(45, 36, 30, 0.58);
 }
 
+.logoutForm {
+  display: flex;
+}
+
+.logoutButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  border: 2px solid rgba(45, 36, 30, 0.14);
+  background: rgba(255, 250, 242, 0.92);
+  color: var(--retro-brown);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform var(--dur-sm) var(--ease-snap),
+    background var(--dur-sm) var(--ease-snap),
+    border-color var(--dur-sm) var(--ease-snap);
+}
+
+.logoutButton:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 244, 225, 0.98);
+  border-color: rgba(45, 36, 30, 0.22);
+}
+
+.logoutButton :global(.material-icons) {
+  font-size: 1rem;
+}
+
 .mainContent {
   min-width: 0;
 }
@@ -266,5 +301,14 @@
 
   .profileEmail {
     max-width: 160px;
+  }
+
+  .logoutForm {
+    width: 100%;
+  }
+
+  .logoutButton {
+    width: 100%;
+    justify-content: center;
   }
 }

@@ -209,6 +209,7 @@ model Business {
   categories      BusinessCategory[]
   tags            BusinessTag[]
   socialLinks     SocialLink[]
+  hours           BusinessHours[]
   jobs            Job[]
   favorites       Favorite[]
   events          Event[]
@@ -219,6 +220,21 @@ model Business {
   @@index([status])
   @@index([planId])
   @@index([publishedAt])
+}
+
+model BusinessHours {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int
+  openTime    String?
+  closeTime   String?
+  isClosed    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([businessId, dayOfWeek])
+  @@index([businessId, dayOfWeek])
 }
 
 model Photo {

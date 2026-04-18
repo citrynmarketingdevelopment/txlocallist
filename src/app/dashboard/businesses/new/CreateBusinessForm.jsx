@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import styles from "../../dashboard.module.css";
 import formStyles from "./form.module.css";
 import { createBusinessFromFormAction, publishBusinessAction } from "@/app/actions/businesses";
+import { BusinessHoursEditor } from "../BusinessHoursEditor";
 import { PhotoUploader } from "@/components/PhotoUploader";
+import { createBusinessHoursFormState, getBusinessHoursDisplayRows } from "@/lib/business-hours";
 
 /**
  * Multi-step business creation form.
@@ -31,6 +32,7 @@ export function CreateBusinessForm({ cities, categories }) {
     address: "",
     latitude: "",
     longitude: "",
+    hours: createBusinessHoursFormState(),
     
     // Step 3: Categories & Tags
     categoryIds: [],
@@ -125,6 +127,7 @@ export function CreateBusinessForm({ cities, categories }) {
         address: formData.address,
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+        hours: formData.hours,
         categoryIds: formData.categoryIds,
         tags: formData.tags
           .split(",")
@@ -344,6 +347,16 @@ export function CreateBusinessForm({ cities, categories }) {
               />
             </div>
           </div>
+
+          <BusinessHoursEditor
+            hours={formData.hours}
+            onChange={(hours) =>
+              setFormData((prev) => ({
+                ...prev,
+                hours,
+              }))
+            }
+          />
         </div>
       )}
 
@@ -445,6 +458,15 @@ export function CreateBusinessForm({ cities, categories }) {
                 .map((id) => categories.find((c) => c.id === id)?.name)
                 .join(", ")}
             </p>
+          </div>
+
+          <div className={formStyles.reviewCard}>
+            <h3>Hours</h3>
+            {getBusinessHoursDisplayRows(formData.hours).map((day) => (
+              <p key={day.dayOfWeek}>
+                <strong>{day.shortLabel}:</strong> {day.value}
+              </p>
+            ))}
           </div>
 
           <div className={formStyles.formGroup}>

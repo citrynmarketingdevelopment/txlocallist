@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { loginAction } from "@/app/actions/auth";
@@ -17,9 +17,9 @@ function SubmitButton() {
 
   return (
     <button type="submit" className={styles.submitButton} disabled={pending}>
-      {pending ? "Logging in..." : "Login"}
+      {pending ? "Signing in..." : "Sign In"}
       <span className="material-icons" aria-hidden="true">
-        bolt
+        arrow_forward
       </span>
     </button>
   );
@@ -27,7 +27,6 @@ function SubmitButton() {
 
 export function LoginForm() {
   const [state, formAction] = useActionState(loginAction, INITIAL_STATE);
-  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={formAction} className={styles.form} noValidate>
@@ -39,14 +38,14 @@ export function LoginForm() {
 
       <div className={styles.field}>
         <label htmlFor="email" className={styles.label}>
-          Station ID (Email)
+          Email Address
         </label>
         <input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="name@station.tx"
+          placeholder="sam@texaslocal.com"
           className={styles.input}
           required
         />
@@ -58,35 +57,29 @@ export function LoginForm() {
       <div className={styles.field}>
         <div className={styles.labelRow}>
           <label htmlFor="password" className={styles.label}>
-            Secure Key
+            Password
           </label>
-          <span className={styles.assistText}>Lost key?</span>
+          <span className={styles.assistText}>Forgot?</span>
         </div>
-        <div className={styles.passwordWrap}>
-          <input
-            id="password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            autoComplete="current-password"
-            placeholder="••••••••"
-            className={styles.passwordInput}
-            required
-          />
-          <button
-            type="button"
-            className={styles.visibilityButton}
-            onClick={() => setShowPassword((current) => !current)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            <span className="material-icons" aria-hidden="true">
-              {showPassword ? "visibility_off" : "visibility"}
-            </span>
-          </button>
-        </div>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="........"
+          className={styles.input}
+          required
+        />
         {state.fieldErrors?.password ? (
           <p className={styles.fieldError}>{state.fieldErrors.password}</p>
         ) : null}
       </div>
+
+      <label className={styles.checkboxRow}>
+        <input type="checkbox" name="remember" className={styles.checkboxInput} />
+        <span className={styles.checkboxVisual} aria-hidden="true"></span>
+        <span className={styles.checkboxLabel}>Keep me signed in</span>
+      </label>
 
       <SubmitButton />
     </form>

@@ -26,6 +26,7 @@ export default async function EditBusinessPage({ params }) {
   const { id } = await params;
 
   let business;
+  let businessHours = [];
   let cities = [];
   let categories = [];
   let schemaNotice = null;
@@ -39,6 +40,19 @@ export default async function EditBusinessPage({ params }) {
         tags: { include: { tag: true } },
       },
     });
+
+    if (business) {
+      try {
+        businessHours = await prisma.businessHours.findMany({
+          where: { businessId: business.id },
+          orderBy: { dayOfWeek: "asc" },
+        });
+      } catch (error) {
+        if (!isMissingPrismaTableError(error)) {
+          throw error;
+        }
+      }
+    }
   } catch (error) {
     if (!isMissingPrismaTableError(error)) {
       throw error;
@@ -120,7 +134,11 @@ export default async function EditBusinessPage({ params }) {
         </div>
       </div>
 
-      <EditBusinessForm business={business} cities={cities} categories={categories} />
+      <EditBusinessForm
+        business={{ ...business, hours: businessHours }}
+        cities={cities}
+        categories={categories}
+      />
     </DashboardLayout>
   );
 }

@@ -56,8 +56,8 @@ export function parseFeatures(featuresJson?: string | null): TierFeatures {
 /**
  * Get the feature set for a given tier slug.
  */
-export function getFeatures(tierSlug: string): TierFeatures {
-  switch (tierSlug.toLowerCase()) {
+export function getFeatures(tierSlug?: string | null): TierFeatures {
+  switch ((tierSlug ?? "free").toLowerCase()) {
     case TIER_NAMES.STARTER:
       return {
         MAX_PHOTOS: 5,

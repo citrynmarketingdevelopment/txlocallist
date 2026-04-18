@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { Navbar, Footer, SearchBar, BusinessCard, Button, CategoryPills } from "@/components";
+import heroBackgroundArt from "@/app/assets/Tx Localist-03.png";
 import styles from "./home.module.css";
 
 export const metadata = {
@@ -90,6 +92,14 @@ export default function Home() {
         {/* Hero Section */}
         <section className={styles.hero}>
           <div className={styles.heroBg} aria-hidden="true">
+            <Image
+              src={heroBackgroundArt}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className={styles.heroBgArt}
+            />
             <div className={styles.heroBgGradient}></div>
           </div>
 

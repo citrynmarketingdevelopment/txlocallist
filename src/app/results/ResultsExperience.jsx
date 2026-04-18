@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import logoImage from "@/app/assets/Tx-Localist-01.png";
 import SearchBar from "@/components/SearchBar";
-import CategoryPills from "@/components/CategoryPills/CategoryPills";
 
 import {
   ArrowRightIcon,
@@ -18,13 +17,21 @@ import {
   ShareIcon,
 } from "./icons";
 
+function buildSuggestBusinessHref({ query = "", location = "" } = {}) {
+  const params = new URLSearchParams();
+  if (query) params.set("name", query);
+  if (location) params.set("city", location);
+  const queryString = params.toString();
+  return queryString ? `/suggest-business?${queryString}` : "/suggest-business";
+}
+
 /* ─── Card views ──────────────────────────────────────────── */
-function BusinessCard({ biz }) {
+function BusinessCard({ biz, saved, count, onSave }) {
   return (
     <article className="gem-card card-stack-effect">
-      {biz.imageUrl && biz.imageUrl !== "/placeholder.jpg" && (
+      {biz.image?.url && biz.image.url !== "/placeholder.jpg" && (
         <div className="gem-image-wrapper">
-          <img src={biz.imageUrl} alt={biz.name}
+          <img src={biz.image.url} alt={biz.name}
             style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       )}
@@ -34,9 +41,10 @@ function BusinessCard({ biz }) {
         {biz.description?.slice(0, 120)}{biz.description?.length > 120 ? "..." : ""}
       </p>
       <div className="gem-footer">
-        <span className="font-accent gem-meta">
-          {biz.categories?.[0]?.name?.toUpperCase() ?? "LOCAL BUSINESS"}
-        </span>
+        <button type="button" onClick={onSave} className={"save-btn font-accent" + (saved ? " save-btn-saved" : "")}>
+          <span className="material-icons save-btn-icon">{saved ? "favorite" : "favorite_border"}</span>
+          {count > 0 ? `${count} saved` : "Save"}
+        </button>
         <Link href={"/business/" + biz.slug} className="gem-action-btn">
           <ArrowRightIcon size={16} />
         </Link>
@@ -76,12 +84,12 @@ function EventCard({ event }) {
 }
 
 /* ─── List-row views ──────────────────────────────────────── */
-function BusinessRow({ biz }) {
+function BusinessRow({ biz, saved, count, onSave }) {
   return (
     <article className="list-item">
       <div className="list-item-thumb">
-        {biz.imageUrl && biz.imageUrl !== "/placeholder.jpg"
-          ? <img src={biz.imageUrl} alt={biz.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {biz.image?.url && biz.image.url !== "/placeholder.jpg"
+          ? <img src={biz.image.url} alt={biz.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <span className="material-icons list-item-thumb-icon">storefront</span>
         }
       </div>
@@ -96,6 +104,10 @@ function BusinessRow({ biz }) {
         <p className="list-item-desc">
           {biz.description?.slice(0, 160)}{biz.description?.length > 160 ? "..." : ""}
         </p>
+        <button type="button" onClick={onSave} className={"save-btn save-btn-sm font-accent" + (saved ? " save-btn-saved" : "")}>
+          <span className="material-icons save-btn-icon">{saved ? "favorite" : "favorite_border"}</span>
+          {count > 0 ? `${count} saved` : "Save"}
+        </button>
       </div>
       <Link href={"/business/" + biz.slug} className="gem-action-btn list-item-arrow">
         <ArrowRightIcon size={16} />
@@ -135,8 +147,77 @@ function EventRow({ event }) {
   );
 }
 
+function FilterChip({ label, onRemove, tone = "default" }) {
+  return (
+    <span className={"active-filter-chip active-filter-chip-" + tone}>
+      <span>{label}</span>
+      {onRemove ? (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="active-filter-chip-close"
+          aria-label={"Remove " + label}
+        >
+          <span className="material-icons">close</span>
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+function EmptyResultsState({
+  eyebrow,
+  title,
+  description,
+  primaryLabel,
+  primaryHref,
+  primaryAction,
+  secondaryLabel,
+  secondaryHref,
+  secondaryAction,
+}) {
+  return (
+    <div className="results-empty-state card-stack-effect">
+      <p className="font-accent results-empty-eyebrow">{eyebrow}</p>
+      <h3 className="results-empty-title">{title}</h3>
+      <p className="results-empty-description">{description}</p>
+
+      <div className="results-empty-actions">
+        {primaryHref ? (
+          <Link href={primaryHref} className="results-empty-primary">
+            {primaryLabel}
+          </Link>
+        ) : (
+          <button type="button" onClick={primaryAction} className="results-empty-primary">
+            {primaryLabel}
+          </button>
+        )}
+
+        {secondaryLabel ? (
+          secondaryHref ? (
+            <Link href={secondaryHref} className="results-empty-secondary">
+              {secondaryLabel}
+            </Link>
+          ) : (
+            <button type="button" onClick={secondaryAction} className="results-empty-secondary">
+              {secondaryLabel}
+            </button>
+          )
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main component ─────────────────────────────────────── */
-export default function ResultsExperience({ initialQuery = "", initialLocation = "", user = null, dashboardPath = null }) {
+export default function ResultsExperience({
+  initialQuery = "",
+  initialLocation = "",
+  user = null,
+  dashboardPath = null,
+  savedIds = [],
+  initialFavoriteBusinesses = [],
+}) {
   const router    = useRouter();
   const urlParams = useSearchParams();
 
@@ -151,19 +232,63 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
   const [showCategories,   setShowCategories]   = useState(false);
   const [showMobileCities, setShowMobileCities] = useState(false);
   const [activeSort,       setActiveSort]       = useState(""); // "" | "popular"
+  const [activeBrowseTab,  setActiveBrowseTab]  = useState(initialQuery || initialLocation ? "search" : "");
+  const [favoriteBusinesses, setFavoriteBusinesses] = useState(initialFavoriteBusinesses);
+
+  // Saved state: tracks { [businessId]: { saved, count } } for optimistic UI
+  const [savedMap, setSavedMap] = useState(() =>
+    Object.fromEntries(savedIds.map((id) => [id, { saved: true }]))
+  );
 
   const currentYear = new Date().getFullYear();
   const mapsApiKey  = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const suggestBusinessHref = buildSuggestBusinessHref({
+    query: lastSearch.q,
+    location: lastSearch.loc,
+  });
+
+  function replaceResultsUrl({ query = "", location = "", type = "businesses" }) {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (location) params.set("loc", location);
+    if (type && type !== "businesses") params.set("tab", type);
+
+    const queryString = params.toString();
+    router.replace(queryString ? "/results?" + queryString : "/results", { scroll: false });
+  }
 
   useEffect(() => {
-    if (initialQuery || initialLocation) runSearch(initialQuery, initialLocation);
+    if (initialQuery || initialLocation) runSearch(initialQuery, initialLocation, "", "search");
   }, []);
 
-  async function runSearch(q, loc, sort = "") {
+  function syncFavoriteBusinesses(biz, shouldBeSaved, count) {
+    setFavoriteBusinesses((prev) => {
+      const existing = prev.find((item) => item.id === biz.id);
+
+      if (!shouldBeSaved) {
+        return prev.filter((item) => item.id !== biz.id);
+      }
+
+      const nextItem = {
+        ...biz,
+        favoritesCount: count,
+        savedAt: existing?.savedAt ?? new Date().toISOString(),
+      };
+
+      if (existing) {
+        return prev.map((item) => (item.id === biz.id ? nextItem : item));
+      }
+
+      return [nextItem, ...prev];
+    });
+  }
+
+  async function runSearch(q, loc, sort = "", browseTab = "search") {
     setIsSearching(true);
     setHasSearched(true);
     setLastSearch({ q, loc });
     setActiveSort(sort);
+    setActiveBrowseTab(browseTab);
 
     const bizP = new URLSearchParams();
     if (q)    bizP.set("q",    q);
@@ -198,19 +323,205 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
 
   function handleSearchBarSubmit({ query, location, type }) {
     setActiveTab(type);
-    const qs = new URLSearchParams();
-    if (query)    qs.set("q",   query);
-    if (location) qs.set("loc", location);
-    qs.set("tab", type);
-    router.replace("/results?" + qs.toString(), { scroll: false });
-    runSearch(query, location);
+    replaceResultsUrl({ query, location, type });
+    runSearch(query, location, "", "search");
   }
 
   function clearSearch() {
     setBusinesses([]);
     setEvents([]);
     setHasSearched(false);
+    setActiveSort("");
+    setActiveBrowseTab("");
     router.replace("/results", { scroll: false });
+  }
+
+  function openNewListings() {
+    setActiveTab("businesses");
+    setViewMode("card");
+    replaceResultsUrl({ query: "", location: "", type: "businesses" });
+    runSearch("", "", "", "new");
+  }
+
+  function openMostSaved() {
+    setActiveTab("businesses");
+    setViewMode("card");
+    replaceResultsUrl({ query: "", location: lastSearch.loc, type: "businesses" });
+    runSearch("", lastSearch.loc, "popular", "popular");
+  }
+
+  function openFavorites() {
+    if (!user) {
+      router.push("/login?next=/results");
+      return;
+    }
+
+    setActiveTab("businesses");
+    setViewMode("card");
+    setActiveSort("");
+    setActiveBrowseTab("favorites");
+    setHasSearched(true);
+    replaceResultsUrl({ query: "", location: "", type: "businesses" });
+  }
+
+  function removeQueryFilter() {
+    if (activeBrowseTab === "favorites") return;
+
+    const nextQuery = "";
+    const nextLocation = activeBrowseTab === "new" ? "" : lastSearch.loc;
+
+    if (!nextLocation && activeTab === "businesses" && activeBrowseTab !== "popular") {
+      clearSearch();
+      return;
+    }
+
+    replaceResultsUrl({ query: nextQuery, location: nextLocation, type: activeTab });
+    runSearch(nextQuery, nextLocation, activeSort, activeBrowseTab || "search");
+  }
+
+  function removeLocationFilter() {
+    if (activeBrowseTab === "favorites") return;
+
+    const nextLocation = "";
+
+    if (!lastSearch.q && activeTab === "businesses" && activeBrowseTab !== "popular") {
+      clearSearch();
+      return;
+    }
+
+    replaceResultsUrl({ query: lastSearch.q, location: nextLocation, type: activeTab });
+    runSearch(lastSearch.q, nextLocation, activeSort, activeBrowseTab || "search");
+  }
+
+  function removeBrowseFilter() {
+    if (activeBrowseTab === "favorites") {
+      if (lastSearch.q || lastSearch.loc) {
+        replaceResultsUrl({ query: lastSearch.q, location: lastSearch.loc, type: activeTab });
+        runSearch(lastSearch.q, lastSearch.loc, "", "search");
+      } else {
+        clearSearch();
+      }
+      return;
+    }
+
+    if (lastSearch.q || lastSearch.loc || activeTab === "events") {
+      replaceResultsUrl({ query: lastSearch.q, location: lastSearch.loc, type: activeTab });
+      runSearch(lastSearch.q, lastSearch.loc, "", "search");
+    } else {
+      clearSearch();
+    }
+  }
+
+  function removeEventsFilter() {
+    setActiveTab("businesses");
+
+    if (lastSearch.q || lastSearch.loc) {
+      replaceResultsUrl({ query: lastSearch.q, location: lastSearch.loc, type: "businesses" });
+      runSearch(lastSearch.q, lastSearch.loc, "", "search");
+    } else {
+      clearSearch();
+    }
+  }
+
+  async function toggleSave(biz) {
+    if (!user) {
+      router.push("/login?next=/results");
+      return;
+    }
+    // Optimistic update
+    const current = savedMap[biz.id];
+    const wasSaved = current?.saved ?? false;
+    const oldCount = current?.count ?? biz.favoritesCount ?? 0;
+    const optimisticSaved = !wasSaved;
+    const optimisticCount = wasSaved ? Math.max(0, oldCount - 1) : oldCount + 1;
+    setSavedMap((prev) => ({
+      ...prev,
+      [biz.id]: { saved: optimisticSaved, count: optimisticCount },
+    }));
+    syncFavoriteBusinesses(biz, optimisticSaved, optimisticCount);
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId: biz.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSavedMap((prev) => ({ ...prev, [biz.id]: { saved: data.saved, count: data.count } }));
+        syncFavoriteBusinesses(biz, data.saved, data.count);
+      } else {
+        // Revert on failure
+        setSavedMap((prev) => ({ ...prev, [biz.id]: { saved: wasSaved, count: oldCount } }));
+        syncFavoriteBusinesses(biz, wasSaved, oldCount);
+      }
+    } catch {
+      setSavedMap((prev) => ({ ...prev, [biz.id]: { saved: wasSaved, count: oldCount } }));
+      syncFavoriteBusinesses(biz, wasSaved, oldCount);
+    }
+  }
+
+  function getSaveState(biz) {
+    const override = savedMap[biz.id];
+    return {
+      saved: override?.saved ?? false,
+      count: override?.count ?? biz.favoritesCount ?? 0,
+    };
+  }
+
+  const activeFilterChips = [];
+
+  if (hasSearched && activeTab === "events") {
+    activeFilterChips.push({
+      key: "events",
+      label: "Local Events",
+      tone: "events",
+      onRemove: removeEventsFilter,
+    });
+  }
+
+  if (hasSearched && activeBrowseTab === "new") {
+    activeFilterChips.push({
+      key: "new",
+      label: "New",
+      tone: "new",
+      onRemove: removeBrowseFilter,
+    });
+  }
+
+  if (hasSearched && activeBrowseTab === "popular") {
+    activeFilterChips.push({
+      key: "popular",
+      label: "Most Saved",
+      tone: "popular",
+      onRemove: removeBrowseFilter,
+    });
+  }
+
+  if (hasSearched && activeBrowseTab === "favorites") {
+    activeFilterChips.push({
+      key: "favorites",
+      label: "My Favorites",
+      tone: "favorites",
+      onRemove: removeBrowseFilter,
+    });
+  }
+
+  if (hasSearched && activeBrowseTab !== "favorites" && lastSearch.q) {
+    activeFilterChips.push({
+      key: "query",
+      label: `Query: ${lastSearch.q}`,
+      tone: "default",
+      onRemove: removeQueryFilter,
+    });
+  }
+
+  if (hasSearched && activeBrowseTab !== "favorites" && lastSearch.loc) {
+    activeFilterChips.push({
+      key: "location",
+      label: `Near ${lastSearch.loc}`,
+      tone: "location",
+      onRemove: removeLocationFilter,
+    });
   }
 
   /* Results panel (tab + view-mode aware) */
@@ -241,22 +552,57 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
 
     /* ── Business results ── */
     if (activeTab === "businesses") {
-      if (businesses.length === 0)
-        return <p className="error-banner">No businesses found. Try a different keyword or city.</p>;
+      const visibleBusinesses = activeBrowseTab === "favorites" ? favoriteBusinesses : businesses;
+
+      if (visibleBusinesses.length === 0) {
+        return activeBrowseTab === "favorites"
+          ? (
+              <EmptyResultsState
+                eyebrow="Saved list"
+                title="Your favorites list is still empty."
+                description="Tap the heart on any listing and it will land here for quick revisits."
+                primaryLabel="Explore Businesses"
+                primaryAction={clearSearch}
+                secondaryLabel="Suggest a Business"
+                secondaryHref={suggestBusinessHref}
+              />
+            )
+          : (
+              <EmptyResultsState
+                eyebrow="No matches"
+                title="Nothing matched that search."
+                description="Try broadening your search, removing a filter chip, or telling us about a great local business we should add."
+                primaryLabel="Clear Filters"
+                primaryAction={clearSearch}
+                secondaryLabel="Suggest a Business"
+                secondaryHref={suggestBusinessHref}
+              />
+            );
+      }
+
       return viewMode === "list"
-        ? <div className="list-container">{businesses.map((b) => <BusinessRow key={b.id} biz={b} />)}</div>
-        : <div className="grid-container">{businesses.map((b) => <BusinessCard key={b.id} biz={b} />)}</div>;
+        ? <div className="list-container">{visibleBusinesses.map((b) => {
+            const { saved, count } = getSaveState(b);
+            return <BusinessRow key={b.id} biz={b} saved={saved} count={count} onSave={() => toggleSave(b)} />;
+          })}</div>
+        : <div className="grid-container">{visibleBusinesses.map((b) => {
+            const { saved, count } = getSaveState(b);
+            return <BusinessCard key={b.id} biz={b} saved={saved} count={count} onSave={() => toggleSave(b)} />;
+          })}</div>;
     }
 
     /* ── Event results ── */
     if (events.length === 0) {
       return (
-        <p className="error-banner">
-          No events found near {lastSearch.loc || lastSearch.q || "this area"}.{" "}
-          <Link href="/dashboard/events/new" style={{ color: "var(--retro-teal)", fontWeight: 700 }}>
-            Post one →
-          </Link>
-        </p>
+        <EmptyResultsState
+          eyebrow="No events"
+          title={`No events found near ${lastSearch.loc || lastSearch.q || "this area"}.`}
+          description="If you know about something worth showing up for, send it our way or post one from the dashboard."
+          primaryLabel="Suggest a Local Spot"
+          primaryHref={suggestBusinessHref}
+          secondaryLabel="Clear Filters"
+          secondaryAction={clearSearch}
+        />
       );
     }
     return viewMode === "list"
@@ -309,7 +655,8 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
                       onClick={() => {
                         setShowCities(false);
                         setActiveTab("businesses");
-                        runSearch("", city);
+                        replaceResultsUrl({ query: "", location: city, type: "businesses" });
+                        runSearch("", city, "", "search");
                       }}
                     >
                       <span className="material-icons city-option-pin">place</span>
@@ -351,7 +698,8 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
                       onClick={() => {
                         setShowCategories(false);
                         setActiveTab("businesses");
-                        runSearch(cat.q, lastSearch.loc);
+                        replaceResultsUrl({ query: cat.q, location: lastSearch.loc, type: "businesses" });
+                        runSearch(cat.q, lastSearch.loc, "", "search");
                       }}
                     >
                       <span className="material-icons city-option-pin">{cat.icon}</span>
@@ -361,33 +709,6 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
                 </div>
               )}
             </div>
-
-            {/* New listings */}
-            <button
-              type="button"
-              className="font-accent nav-link nav-link-btn"
-              onClick={() => { setActiveTab("businesses"); runSearch("", ""); }}
-            >
-              <div className="nav-icon-wrapper nav-icon-new">
-                <span className="material-icons" style={{ fontSize: "1.2rem", color: "white" }}>fiber_new</span>
-              </div>
-              NEW
-            </button>
-
-            {/* Most Popular */}
-            <button
-              type="button"
-              className={"font-accent nav-link nav-link-btn" + (activeSort === "popular" ? " nav-link-popular-active" : "")}
-              onClick={() => { setActiveTab("businesses"); runSearch("", lastSearch.loc, "popular"); }}
-            >
-              <div className="nav-icon-wrapper nav-icon-hot">
-                <span className="fire-emoji">🔥</span>
-              </div>
-              MOST POPULAR
-              {activeSort === "popular" && (
-                <span className="hot-badge hot-badge-live font-accent">LIVE</span>
-              )}
-            </button>
 
             {/* Add listing */}
             <Link href="/post-your-business" className="font-accent nav-link">
@@ -401,6 +722,41 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
             >
               {user ? "DASHBOARD" : "LOGIN"}
             </Link>
+
+            <div className="sidebar-browse-tabs">
+              <button
+                type="button"
+                className={"font-accent sidebar-browse-tab" + (activeBrowseTab === "new" ? " sidebar-browse-tab-active" : "")}
+                onClick={openNewListings}
+              >
+                <span className="sidebar-browse-icon sidebar-browse-icon-new">
+                  <span className="material-icons">fiber_new</span>
+                </span>
+                <span className="sidebar-browse-label">NEW</span>
+              </button>
+
+              <button
+                type="button"
+                className={"font-accent sidebar-browse-tab" + (activeBrowseTab === "popular" ? " sidebar-browse-tab-active" : "")}
+                onClick={openMostSaved}
+              >
+                <span className="sidebar-browse-icon sidebar-browse-icon-popular">
+                  <span className="material-icons">whatshot</span>
+                </span>
+                <span className="sidebar-browse-label">MOST SAVED</span>
+              </button>
+
+              <button
+                type="button"
+                className={"font-accent sidebar-browse-tab" + (activeBrowseTab === "favorites" ? " sidebar-browse-tab-active" : "")}
+                onClick={openFavorites}
+              >
+                <span className="sidebar-browse-icon sidebar-browse-icon-favorites">
+                  <span className="material-icons">favorite</span>
+                </span>
+                <span className="sidebar-browse-label">MY FAVORITES</span>
+              </button>
+            </div>
           </nav>
         </div>
         <div className="sidebar-footer">
@@ -419,8 +775,9 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
             </div>
             <SearchBar
               action="/results"
-              initialQuery={lastSearch.q}
-              initialLocation={lastSearch.loc}
+              initialQuery={activeBrowseTab === "favorites" ? "" : lastSearch.q}
+              initialLocation={activeBrowseTab === "favorites" ? "" : lastSearch.loc}
+              defaultLocation={activeBrowseTab === "favorites" ? "" : "Austin, TX"}
               initialType={activeTab}
               variant="inline"
               onSubmit={handleSearchBarSubmit}
@@ -437,7 +794,23 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
                 <span className="font-accent results-count">
                   {isSearching ? "SEARCHING..." : (
                     activeTab === "businesses"
-                      ? `${businesses.length} BUSINESS${businesses.length !== 1 ? "ES" : ""}${activeSort === "popular" ? " · 🔥 MOST POPULAR" : ""}`
+                      ? `${
+                          activeBrowseTab === "favorites"
+                            ? favoriteBusinesses.length
+                            : businesses.length
+                        } ${
+                          (activeBrowseTab === "favorites" ? favoriteBusinesses.length : businesses.length) !== 1
+                            ? "BUSINESSES"
+                            : "BUSINESS"
+                        }${
+                          activeBrowseTab === "favorites"
+                            ? " · MY FAVORITES"
+                            : activeSort === "popular"
+                              ? " · MOST SAVED"
+                              : activeBrowseTab === "new"
+                                ? " · NEW"
+                                : ""
+                        }`
                       : `${events.length} EVENT${events.length !== 1 ? "S" : ""}`
                   )}
                 </span>
@@ -467,7 +840,39 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
                   </button>
                 </div>
               </div>
+
+              {activeFilterChips.length > 0 && (
+                <div className="active-filter-row" aria-label="Active filters">
+                  {activeFilterChips.map((chip) => (
+                    <FilterChip
+                      key={chip.key}
+                      label={chip.label}
+                      tone={chip.tone}
+                      onRemove={chip.onRemove}
+                    />
+                  ))}
+                </div>
+              )}
+
               <ResultsPanel />
+
+              <div className="results-trust-strip card-stack-effect">
+                <div className="results-trust-copy">
+                  <p className="font-accent results-trust-eyebrow">TX Localist Promise</p>
+                  <h3 className="results-trust-title">No ads. No sponsored placements. Just local.</h3>
+                  <p className="results-trust-description">
+                    If something great is missing from the directory, tell us and we&apos;ll take a look.
+                  </p>
+                </div>
+                <div className="results-trust-actions">
+                  <Link href={suggestBusinessHref} className="results-trust-primary">
+                    Suggest a Business
+                  </Link>
+                  <Link href="/post-your-business" className="results-trust-secondary">
+                    Add Your Listing
+                  </Link>
+                </div>
+              </div>
             </section>
           )}
 
@@ -547,7 +952,7 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
         <button
           type="button"
           className="font-accent mobile-nav-item"
-          onClick={() => { setActiveTab("businesses"); runSearch("", ""); }}
+          onClick={openNewListings}
         >
           <span className="material-icons">fiber_new</span>
           <span>NEW</span>
@@ -588,7 +993,8 @@ export default function ResultsExperience({ initialQuery = "", initialLocation =
                   onClick={() => {
                     setShowMobileCities(false);
                     setActiveTab("businesses");
-                    runSearch("", city);
+                    replaceResultsUrl({ query: "", location: city, type: "businesses" });
+                    runSearch("", city, "", "search");
                   }}
                 >
                   {city}

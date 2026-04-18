@@ -1,47 +1,31 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
-import { Navbar, Footer, Button } from "@/components";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getBusinessHoursDisplayRows } from "@/lib/business-hours";
+import { isMissingPrismaTableError } from "@/lib/prisma-errors";
+import { Navbar, Footer, SaveButton } from "@/components";
 import { getFeatures } from "@/lib/tiers";
 
+import ShareButton from "./ShareButton";
+import PhotoGallery from "./PhotoGallery";
 import styles from "./page.module.css";
 
-/**
- * Dynamic metadata for SEO.
- */
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-
   const business = await prisma.business.findUnique({
     where: { slug },
-    select: {
-      name: true,
-      description: true,
-      city: { select: { name: true } },
-    },
+    select: { name: true, description: true, city: { select: { name: true } } },
   });
-
-  if (!business) {
-    return { title: "Business not found" };
-  }
-
+  if (!business) return { title: "Business not found" };
   return {
     title: `${business.name} in ${business.city.name} | Texas Localist`,
     description: business.description,
-    openGraph: {
-      title: business.name,
-      description: business.description,
-      type: "website",
-    },
+    openGraph: { title: business.name, description: business.description, type: "website" },
   };
 }
 
-/**
- * Generate static paths for the top 100 businesses.
- * Other paths are generated on-demand (ISR).
- */
 export async function generateStaticParams() {
   try {
     const businesses = await prisma.business.findMany({
@@ -50,267 +34,363 @@ export async function generateStaticParams() {
       take: 100,
       orderBy: { publishedAt: "desc" },
     });
-
     return businesses.map((b) => ({ slug: b.slug }));
-  } catch (error) {
-    console.warn("Skipping business static params generation:", error.message);
+  } catch {
     return [];
   }
 }
 
-export const revalidate = 3600; // Revalidate every hour
+export const revalidate = 3600;
+export const dynamicParams = true; // render unknown slugs on-demand, never 404 them early
 
-/**
- * Detail page for a business listing.
- */
+const SOCIAL_ICONS = {
+  instagram: "photo_camera",
+  facebook:  "thumb_up",
+  twitter:   "tag",
+  tiktok:    "music_note",
+  youtube:   "play_circle",
+  linkedin:  "work",
+};
+
+function getDomain(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); }
+  catch { return url; }
+}
+
 export default async function BusinessDetailPage({ params }) {
   const { slug } = await params;
+
+  const user = await getCurrentUser().catch(() => null);
 
   const business = await prisma.business.findUnique({
     where: { slug },
     include: {
-      owner: {
-        select: { id: true, name: true },
-      },
-      city: {
-        select: { id: true, name: true, slug: true },
-      },
-      plan: {
-        select: { slug: true, features: true },
-      },
-      photos: {
-        orderBy: { order: "asc" },
-      },
-      categories: {
-        select: {
-          category: {
-            select: { id: true, name: true, slug: true },
-          },
-        },
-      },
-      tags: {
-        select: {
-          tag: {
-            select: { id: true, name: true, slug: true },
-          },
-        },
-      },
-      socialLinks: {
-        orderBy: { order: "asc" },
-      },
-      jobs: {
-        where: { status: "ACTIVE" },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      },
+      city:        { select: { id: true, name: true, slug: true } },
+      plan:        { select: { slug: true, features: true } },
+      photos:      { orderBy: { order: "asc" } },
+      categories:  { select: { category: { select: { id: true, name: true, slug: true } } } },
+      tags:        { select: { tag: { select: { id: true, name: true, slug: true } } } },
+      socialLinks: { orderBy: { order: "asc" } },
+      jobs:        { where: { status: "ACTIVE" }, orderBy: { createdAt: "desc" }, take: 5 },
     },
   });
 
-  // Not found
-  if (!business || business.status !== "ACTIVE") {
-    notFound();
+  if (!business || business.status !== "ACTIVE") notFound();
+
+  let businessHours = [];
+  try {
+    businessHours = await prisma.businessHours.findMany({
+      where: { businessId: business.id },
+      orderBy: { dayOfWeek: "asc" },
+    });
+  } catch (error) {
+    if (!isMissingPrismaTableError(error)) {
+      throw error;
+    }
   }
 
-  // Parse features
-  const features = getFeatures(business.plan?.slug);
+  const [favoritesCount, userFavorite] = await Promise.all([
+    prisma.favorite.count({ where: { businessId: business.id } }),
+    user
+      ? prisma.favorite.findUnique({
+          where: { userId_businessId: { userId: user.id, businessId: business.id } },
+        })
+      : Promise.resolve(null),
+  ]);
+  const isSaved = !!userFavorite;
+
+  const features    = getFeatures(business.plan?.slug ?? "free");
   const showContact = features.SHOW_CONTACT;
   const showWebsite = features.SHOW_WEBSITE;
   const showSocials = features.SHOW_SOCIALS;
+  const isPaid      = !!(business.plan?.slug && business.plan.slug !== "free");
 
-  // Main image
-  const mainPhoto = business.photos[0];
+  const [heroPhoto, ...galleryPhotos] = business.photos;
+  const hoursRows = getBusinessHoursDisplayRows(businessHours);
+
+  const mapsQuery = encodeURIComponent(`${business.address}, ${business.city.name}, TX`);
+  const mapsUrl   = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+  const pageUrl   = `https://txlocalist.com/business/${slug}`;
 
   return (
     <>
       <Navbar />
 
-      <main className={styles.container}>
-        {/* Hero / Gallery Section */}
-        <section className={styles.hero}>
-          {mainPhoto ? (
-            <div className={styles.heroImage}>
+      <div className={styles.pageWrapper}>
+
+        {/* ── HERO ── */}
+        <section className={styles.heroSection}>
+
+          <div className={styles.heroImageWrap}>
+            {heroPhoto ? (
               <img
-                src={mainPhoto.url}
-                alt={mainPhoto.alt || business.name}
-                width={1000}
-                height={600}
+                src={heroPhoto.url}
+                alt={heroPhoto.alt || business.name}
+                className={styles.heroImg}
               />
-            </div>
-          ) : (
-            <div className={styles.heroPlaceholder}>
-              <div className={styles.placeholderText}>No image available</div>
-            </div>
-          )}
+            ) : (
+              <div className={styles.heroPlaceholderBg} />
+            )}
 
-          {/* Additional photos carousel (minimal) */}
-          {business.photos.length > 1 && (
-            <div className={styles.photoGallery}>
-              {business.photos.slice(1, 4).map((photo) => (
-                <img
-                  key={photo.id}
-                  src={photo.url}
-                  alt={photo.alt || ""}
-                  className={styles.thumbPhoto}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+            <div className={styles.heroOverlay}>
+              {/* Top-left badges */}
+              <div className={styles.heroBadges}>
+                <span className={styles.badgeCity}>{business.city.name}, Texas</span>
+                {isPaid && (
+                  <span className={styles.badgeTier}>{business.plan.slug.toUpperCase()}</span>
+                )}
+              </div>
 
-        {/* Content Section */}
-        <section className={styles.content}>
-          <div className={styles.header}>
-            <div>
-              <h1 className={styles.title}>{business.name}</h1>
-              <p className={styles.location}>
-                📍 {business.addressName}, {business.city.name}
-              </p>
+              {/* Bottom row: title + actions */}
+              <div className={styles.heroBottom}>
+                <h1 className={styles.heroTitle}>{business.name}</h1>
+                <div className={styles.heroActions}>
+                  <ShareButton
+                    title={business.name}
+                    url={pageUrl}
+                    iconOnly
+                    className={styles.heroShareBtn}
+                  />
+                  <SaveButton
+                    businessId={business.id}
+                    initialSaved={isSaved}
+                    initialCount={favoritesCount}
+                    isLoggedIn={!!user}
+                    size="hero"
+                  />
+                </div>
+              </div>
             </div>
-
-            {/* Tier badge */}
-            <div className={styles.tierBadge}>{business.plan?.slug || "Free"}</div>
           </div>
 
-          {/* Description */}
-          <p className={styles.description}>{business.description}</p>
-
-          {/* Contact Info (tier-gated) */}
-          {(showContact || showWebsite || showSocials) && (
-            <div className={styles.contactSection}>
-              <h2 className={styles.sectionTitle}>Get in Touch</h2>
-
-              {showContact && (
-                <div className={styles.contactBlock}>
-                  {business.phone && (
-                    <div>
-                      <a href={`tel:${business.phone}`} className={styles.contactLink}>
-                        📞 {business.phone}
-                      </a>
-                    </div>
-                  )}
-                  {business.email && (
-                    <div>
-                      <a href={`mailto:${business.email}`} className={styles.contactLink}>
-                        ✉️ {business.email}
-                      </a>
-                    </div>
-                  )}
+          {/* Stats bar */}
+          <div className={styles.statsBar}>
+            <div className={styles.statsLeft}>
+              <div className={styles.avatarStack}>
+                <div className={styles.avatarA}>TX</div>
+                <div className={styles.avatarB}>L</div>
+                <div className={styles.avatarC}>
+                  {favoritesCount > 2 ? `+${favoritesCount - 2}` : "+"}
                 </div>
-              )}
+              </div>
+              <span className={styles.savedLabel}>
+                {favoritesCount > 0
+                  ? `Saved by ${favoritesCount.toLocaleString()} ${favoritesCount === 1 ? "local" : "locals"}`
+                  : "Be the first to save this spot"}
+              </span>
+            </div>
 
-              {showWebsite && business.website && (
-                <div>
+            {showContact && (business.phone || (showWebsite && business.website)) && (
+              <div className={styles.statsRight}>
+                {business.phone && (
+                  <a href={`tel:${business.phone}`} className={styles.statLink}>
+                    <span className="material-icons" style={{ fontSize: "1.1rem" }}>call</span>
+                    {business.phone}
+                  </a>
+                )}
+                {business.phone && showWebsite && business.website && (
+                  <div className={styles.statDivider} />
+                )}
+                {showWebsite && business.website && (
                   <a
                     href={business.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={styles.websiteButton}
+                    className={styles.statLink}
                   >
-                    Visit Website →
+                    <span className="material-icons" style={{ fontSize: "1.1rem" }}>language</span>
+                    {getDomain(business.website)}
                   </a>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── PHOTO GALLERY ── */}
+        {business.photos.length > 0 && (
+          <section className={styles.gallerySection}>
+            <div className={styles.galleryHeader}>
+              <div>
+                <p className={styles.eyebrow}>The Atmosphere</p>
+                <h2 className={styles.gallerySectionTitle}>Photo Gallery</h2>
+              </div>
+              <span className={styles.viewAllBtn}>
+                View All {business.photos.length} Photo{business.photos.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <PhotoGallery photos={business.photos} businessName={business.name} />
+          </section>
+        )}
+
+        {/* ── BENTO: About + Hours ── */}
+        <section className={styles.bentoSection}>
+          <div className={styles.bentoGrid}>
+
+            {/* About card */}
+            <div className={styles.aboutCard}>
+              <h2 className={styles.aboutTitle}>About {business.name}</h2>
+              <p className={styles.aboutDesc}>{business.description}</p>
+
+              {(business.categories.length > 0 || business.tags.length > 0) && (
+                <div className={styles.chipRow}>
+                  {business.categories.map((bc) => (
+                    <Link
+                      key={bc.category.id}
+                      href={`/categories/${bc.category.slug}`}
+                      className={styles.chip}
+                    >
+                      {bc.category.name}
+                    </Link>
+                  ))}
+                  {business.tags.map((bt) => (
+                    <Link
+                      key={bt.tag.id}
+                      href={`/results?q=${encodeURIComponent(bt.tag.name)}`}
+                      className={styles.chipTag}
+                    >
+                      #{bt.tag.name}
+                    </Link>
+                  ))}
                 </div>
               )}
 
+              {!showContact && (
+                <div className={styles.upgradeNudge}>
+                  <span
+                    className="material-icons"
+                    style={{ fontSize: "1.5rem", color: "var(--retro-yellow)", flexShrink: 0 }}
+                  >
+                    lock
+                  </span>
+                  <div>
+                    <p className={styles.upgradeNudgeTitle}>Contact info hidden</p>
+                    <p className={styles.upgradeNudgeDesc}>
+                      This business hasn&apos;t upgraded yet. Know the owner?
+                    </p>
+                  </div>
+                  <Link href="/pricing" className={styles.upgradeNudgeBtn}>
+                    View Plans →
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Hours + Social card (dark) */}
+            <div className={styles.hoursCard}>
+              <h3 className={styles.hoursTitle}>Service Hours</h3>
+              <div className={styles.hoursList}>
+                {hoursRows.map((day) => (
+                  <div key={day.dayOfWeek} className={styles.hoursRow}>
+                    <span className={styles.hoursDay}>{day.label}</span>
+                    <span className={styles.hoursVal}>{day.value}</span>
+                  </div>
+                ))}
+              </div>
+
               {showSocials && business.socialLinks.length > 0 && (
-                <div className={styles.socials}>
+                <div className={styles.socialRow}>
                   {business.socialLinks.map((link) => (
                     <a
                       key={link.id}
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={styles.socialLink}
-                      aria-label={link.platform}
+                      className={styles.socialIcon}
+                      title={link.platform}
                     >
-                      {link.platform}
+                      <span className="material-icons" style={{ fontSize: "1.1rem" }}>
+                        {SOCIAL_ICONS[link.platform?.toLowerCase()] ?? "link"}
+                      </span>
                     </a>
                   ))}
                 </div>
               )}
+            </div>
 
-              {!showContact && (
-                <div className={styles.upgradePrompt}>
-                  <p>
-                    <strong>Upgrade to see contact info →</strong>
+          </div>
+        </section>
+
+        {/* ── LOCATION ── */}
+        <section className={styles.locationSection}>
+          <div className={styles.locationCard}>
+
+            <div className={styles.locationInfo}>
+              <p className={styles.eyebrow}>Visit Us</p>
+              <h2 className={styles.locationTitle}>Find the Spot</h2>
+
+              <div className={styles.addressBlock}>
+                <span
+                  className="material-icons"
+                  style={{ fontSize: "1.6rem", color: "var(--retro-red)", flexShrink: 0, marginTop: "0.1rem" }}
+                >
+                  location_on
+                </span>
+                <div>
+                  <p className={styles.addressText}>
+                    {business.address},<br />{business.city.name}, TX
                   </p>
-                  <Button as="link" href="/pricing" variant="primary">
-                    View Plans
-                  </Button>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.directionsLink}
+                  >
+                    Get Directions
+                  </a>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
 
-          {/* Categories & Tags */}
-          {business.categories.length > 0 && (
-            <div className={styles.categories}>
-              <h3 className={styles.sectionTitle}>Categories</h3>
-              <div className={styles.chipList}>
-                {business.categories.map((bc) => (
-                  <Link
-                    key={bc.category.id}
-                    href={`/categories/${bc.category.slug}`}
-                    className={styles.chip}
-                  >
-                    {bc.category.name}
-                  </Link>
-                ))}
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.mapsBtn}
+              >
+                Open in Google Maps
+              </a>
+            </div>
+
+            <div className={styles.locationMapWrap}>
+              <div className={styles.mapPinWrap}>
+                <div className={styles.mapPingRing} />
+                <div className={styles.mapPin}>
+                  <span className="material-icons" style={{ fontSize: "1.75rem" }}>storefront</span>
+                </div>
               </div>
             </div>
-          )}
 
-          {business.tags.length > 0 && (
-            <div className={styles.tags}>
-              <h3 className={styles.sectionTitle}>Tags</h3>
-              <div className={styles.chipList}>
-                {business.tags.map((bt) => (
-                  <Link
-                    key={bt.tag.id}
-                    href={`/search?q=${encodeURIComponent(bt.tag.name)}`}
-                    className={styles.chipSecondary}
-                  >
-                    #{bt.tag.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
+        </section>
 
-          {/* Jobs Section (if available and owner has job posting tier) */}
-          {features.JOB_POSTINGS > 0 && business.jobs.length > 0 && (
-            <div className={styles.jobsSection}>
-              <h2 className={styles.sectionTitle}>
-                Open Positions ({business.jobs.length})
-              </h2>
-              <div className={styles.jobsList}>
-                {business.jobs.map((job) => (
-                  <Link
-                    key={job.id}
-                    href={`/jobs/${job.id}`}
-                    className={styles.jobCard}
-                  >
+        {/* ── JOBS ── */}
+        {features.JOB_POSTINGS > 0 && business.jobs.length > 0 && (
+          <section className={styles.jobsSection}>
+            <p className={styles.eyebrow}>Now Hiring</p>
+            <h2 className={styles.jobsSectionTitle}>
+              Open Positions ({business.jobs.length})
+            </h2>
+            <div className={styles.jobGrid}>
+              {business.jobs.map((job) => (
+                <div key={job.id} className={styles.jobCard}>
+                  <div className={styles.jobCardTop}>
                     <h3 className={styles.jobTitle}>{job.title}</h3>
-                    <p className={styles.jobType}>{job.employmentType}</p>
                     {job.salaryMin && job.salaryMax && (
-                      <p className={styles.jobSalary}>
-                        ${(job.salaryMin / 100).toLocaleString()} —{" "}
-                        ${(job.salaryMax / 100).toLocaleString()}
-                      </p>
+                      <span className={styles.jobSalary}>
+                        ${(job.salaryMin / 100).toLocaleString()} – ${(job.salaryMax / 100).toLocaleString()}
+                      </span>
                     )}
-                  </Link>
-                ))}
-              </div>
+                  </div>
+                  <span className={styles.jobType}>
+                    {job.employmentType.replace("_", " ")}
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
-        {/* Breadcrumb / Navigation */}
-        <section className={styles.navigation}>
-          <Link href={`/cities/${business.city.slug}`} className={styles.backLink}>
-            ← Back to {business.city.name}
-          </Link>
-        </section>
-      </main>
+      </div>
 
       <Footer />
     </>

@@ -37,6 +37,8 @@
 
 .footerLinks {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 2rem;
   font-family: var(--font-accent), cursive;
   font-size: 0.75rem;

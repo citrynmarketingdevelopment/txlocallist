@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth/session";
+import { normalizeBusinessHoursInput } from "@/lib/business-hours";
 import { sendListingPublishedEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { isMissingPrismaTableError, phase3SchemaMessage } from "@/lib/prisma-errors";
 
 const MIN_NAME_LENGTH = 3;
 const MIN_DESCRIPTION_LENGTH = 20;
@@ -427,6 +429,17 @@ export async function createBusinessFromFormAction(data) {
   }
 
   const tagNames = normalizeTagNames(data.tags);
+  let normalizedHours = [];
+
+  try {
+    normalizedHours = normalizeBusinessHoursInput(data.hours);
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Enter valid business hours and try again.",
+    };
+  }
+
   const lat =
     typeof data.latitude === "number"
       ? data.latitude
@@ -462,60 +475,72 @@ export async function createBusinessFromFormAction(data) {
   }
 
   try {
-    // Create the business
-    const business = await prisma.business.create({
-      data: {
-        slug,
-        name: data.name.trim(),
-        description: data.description.trim(),
-        addressName: data.addressName?.trim() || data.name.trim(),
-        address: data.address.trim(),
-        zipCode: data.zipCode?.trim() || inferredZipCode,
-        cityId: data.cityId,
-        phone: data.phone?.trim() || null,
-        email: data.email?.trim().toLowerCase() || null,
-        website: data.website?.trim() || null,
-        lat,
-        lng,
-        ownerId: user.id,
-        planId: freePlan.id,
-        status: "DRAFT",
-        // Attach categories
-        categories:
-          data.categoryIds && data.categoryIds.length > 0
-            ? {
-                create: data.categoryIds.map((categoryId) => ({ categoryId })),
-              }
-            : undefined,
-        // Attach tags
-        tags:
-          tagNames.length > 0
-            ? {
-                create: tagNames.map((tagName) => ({
-                  tag: {
-                    connectOrCreate: {
-                      where: { slug: slugify(tagName) },
-                      create: {
-                        name: tagName,
-                        slug: slugify(tagName),
+    const business = await prisma.$transaction(async (tx) => {
+      const createdBusiness = await tx.business.create({
+        data: {
+          slug,
+          name: data.name.trim(),
+          description: data.description.trim(),
+          addressName: data.addressName?.trim() || data.name.trim(),
+          address: data.address.trim(),
+          zipCode: data.zipCode?.trim() || inferredZipCode,
+          cityId: data.cityId,
+          phone: data.phone?.trim() || null,
+          email: data.email?.trim().toLowerCase() || null,
+          website: data.website?.trim() || null,
+          lat,
+          lng,
+          ownerId: user.id,
+          planId: freePlan.id,
+          status: "DRAFT",
+          categories:
+            data.categoryIds && data.categoryIds.length > 0
+              ? {
+                  create: data.categoryIds.map((categoryId) => ({ categoryId })),
+                }
+              : undefined,
+          tags:
+            tagNames.length > 0
+              ? {
+                  create: tagNames.map((tagName) => ({
+                    tag: {
+                      connectOrCreate: {
+                        where: { slug: slugify(tagName) },
+                        create: {
+                          name: tagName,
+                          slug: slugify(tagName),
+                        },
                       },
                     },
-                  },
-                })),
-              }
-            : undefined,
-        // Attach uploaded photos
-        photos:
-          data.photos && data.photos.length > 0
-            ? {
-                create: data.photos.map((photo, i) => ({
-                  url: photo.url,
-                  alt: photo.name || data.name?.trim() || "",
-                  order: i,
-                })),
-              }
-            : undefined,
-      },
+                  })),
+                }
+              : undefined,
+          photos:
+            data.photos && data.photos.length > 0
+              ? {
+                  create: data.photos.map((photo, i) => ({
+                    url: photo.url,
+                    alt: photo.name || data.name?.trim() || "",
+                    order: i,
+                  })),
+                }
+              : undefined,
+        },
+      });
+
+      if (normalizedHours.length > 0) {
+        await tx.businessHours.createMany({
+          data: normalizedHours.map((entry) => ({
+            businessId: createdBusiness.id,
+            dayOfWeek: entry.dayOfWeek,
+            openTime: entry.openTime,
+            closeTime: entry.closeTime,
+            isClosed: entry.isClosed,
+          })),
+        });
+      }
+
+      return createdBusiness;
     });
 
     revalidatePath("/dashboard/businesses");
@@ -528,6 +553,12 @@ export async function createBusinessFromFormAction(data) {
     };
   } catch (error) {
     console.error("Error creating business:", error);
+    if (isMissingPrismaTableError(error)) {
+      return {
+        success: false,
+        message: `${phase3SchemaMessage} Run the Prisma schema update before saving business hours.`,
+      };
+    }
     return { success: false, message: "Failed to create business. Please try again." };
   }
 }
@@ -593,6 +624,17 @@ export async function updateBusinessAction(businessId, data) {
   }
 
   const tagNames = normalizeTagNames(data.tags);
+  let normalizedHours = null;
+
+  try {
+    normalizedHours = Array.isArray(data.hours) ? normalizeBusinessHoursInput(data.hours) : null;
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Enter valid business hours and try again.",
+    };
+  }
+
   const lat =
     typeof data.latitude === "number"
       ? data.latitude
@@ -608,45 +650,63 @@ export async function updateBusinessAction(businessId, data) {
 
   // Update business
   try {
-    await prisma.business.update({
-      where: { id: businessId },
-      data: {
-        name: data.name.trim(),
-        description: data.description.trim(),
-        phone: data.phone || null,
-        email: data.email?.trim().toLowerCase() || null,
-        website: data.website?.trim() || null,
-        address: data.address.trim(),
-        cityId: data.cityId,
-        lat,
-        lng,
-        // Update categories
-        categories:
-          data.categoryIds && data.categoryIds.length > 0
-            ? {
-                deleteMany: {},
-                create: data.categoryIds.map((categoryId) => ({ categoryId })),
-              }
-            : undefined,
-        // Update tags
-        tags:
-          tagNames.length > 0
-            ? {
-                deleteMany: {},
-                create: tagNames.map((tagName) => ({
-                  tag: {
-                    connectOrCreate: {
-                      where: { slug: slugify(tagName) },
-                      create: {
-                        name: tagName,
-                        slug: slugify(tagName),
+    await prisma.$transaction(async (tx) => {
+      await tx.business.update({
+        where: { id: businessId },
+        data: {
+          name: data.name.trim(),
+          description: data.description.trim(),
+          phone: data.phone || null,
+          email: data.email?.trim().toLowerCase() || null,
+          website: data.website?.trim() || null,
+          address: data.address.trim(),
+          cityId: data.cityId,
+          lat,
+          lng,
+          categories:
+            data.categoryIds && data.categoryIds.length > 0
+              ? {
+                  deleteMany: {},
+                  create: data.categoryIds.map((categoryId) => ({ categoryId })),
+                }
+              : undefined,
+          tags:
+            tagNames.length > 0
+              ? {
+                  deleteMany: {},
+                  create: tagNames.map((tagName) => ({
+                    tag: {
+                      connectOrCreate: {
+                        where: { slug: slugify(tagName) },
+                        create: {
+                          name: tagName,
+                          slug: slugify(tagName),
+                        },
                       },
                     },
-                  },
-                })),
-              }
-            : { deleteMany: {} },
-      },
+                  })),
+                }
+              : { deleteMany: {} },
+        },
+      });
+
+      if (normalizedHours) {
+        await tx.businessHours.deleteMany({
+          where: { businessId },
+        });
+
+        if (normalizedHours.length > 0) {
+          await tx.businessHours.createMany({
+            data: normalizedHours.map((entry) => ({
+              businessId,
+              dayOfWeek: entry.dayOfWeek,
+              openTime: entry.openTime,
+              closeTime: entry.closeTime,
+              isClosed: entry.isClosed,
+            })),
+          });
+        }
+      }
     });
 
     revalidatePath("/dashboard/businesses");
@@ -656,6 +716,12 @@ export async function updateBusinessAction(businessId, data) {
     return { success: true, message: "Business updated successfully!" };
   } catch (error) {
     console.error("Error updating business:", error);
+    if (isMissingPrismaTableError(error)) {
+      return {
+        success: false,
+        message: `${phase3SchemaMessage} Run the Prisma schema update before saving business hours.`,
+      };
+    }
     return { success: false, message: "Failed to update business. Please try again." };
   }
 }

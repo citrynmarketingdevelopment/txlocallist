@@ -5,3 +5,4 @@ export { default as BusinessCard } from "./BusinessCard";
 export { default as Button } from "./Button";
 export { PhotoUploader } from "./PhotoUploader";
 export { default as CategoryPills } from "./CategoryPills/CategoryPills";
+export { SaveButton } from "./SaveButton";

@@ -14,6 +14,8 @@ import styles from "./Footer.module.css";
 export default function Footer({
   links = [
     { href: "/about", label: "ABOUT" },
+    { href: "/how-it-works", label: "HOW IT WORKS" },
+    { href: "/terms", label: "TERMS" },
     { href: "/privacy", label: "PRIVACY" },
     { href: "/contact", label: "CONTACT" },
   ],

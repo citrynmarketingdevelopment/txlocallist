@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import logo from "@/app/assets/Tx-Localist-01.png";
+import { logoutAction } from "@/app/actions/auth";
 import { getCurrentSession } from "@/lib/auth/session";
 
 import styles from "./DashboardShell.module.css";
@@ -12,17 +13,22 @@ import styles from "./DashboardShell.module.css";
 export async function DashboardLayout({ children, activeTab = "overview" }) {
   const session = await getCurrentSession().catch(() => null);
   const user = session?.user ?? null;
+  const isOwnerView = user?.role === "OWNER" || user?.role === "ADMIN";
 
-  const tabs = [
-    { id: "overview", label: "Overview", href: "/dashboard", icon: "dashboard" },
-    { id: "businesses", label: "My Listings", href: "/dashboard/businesses", icon: "storefront" },
-    { id: "events", label: "Events", href: "/dashboard/events", icon: "event" },
-    { id: "billing", label: "Billing", href: "/dashboard/billing", icon: "payments" },
-    { id: "settings", label: "Settings", href: "/dashboard/settings", icon: "settings" },
-  ];
+  const tabs = isOwnerView
+    ? [
+        { id: "overview", label: "Overview", href: "/dashboard", icon: "dashboard" },
+        { id: "favorites", label: "Favorites", href: "/dashboard/favorites", icon: "favorite" },
+        { id: "businesses", label: "My Listings", href: "/dashboard/businesses", icon: "storefront" },
+        { id: "events", label: "Events", href: "/dashboard/events", icon: "event" },
+        { id: "billing", label: "Billing", href: "/dashboard/billing", icon: "payments" },
+        { id: "settings", label: "Settings", href: "/dashboard/settings", icon: "settings" },
+      ]
+    : [{ id: "favorites", label: "Favorites", href: "/dashboard/favorites", icon: "favorite" }];
 
   const sectionTitles = {
     overview: "LocalDirectory",
+    favorites: "Saved Places",
     businesses: "My Listings",
     events: "Events",
     billing: "Billing",
@@ -55,8 +61,11 @@ export async function DashboardLayout({ children, activeTab = "overview" }) {
             </Link>
           </div>
 
-          <Link href="/dashboard/businesses/new" className={styles.sidebarCta}>
-            Add New Listing
+          <Link
+            href={isOwnerView ? "/dashboard/businesses/new" : "/results"}
+            className={styles.sidebarCta}
+          >
+            {isOwnerView ? "Add New Listing" : "Explore Local Spots"}
           </Link>
 
           <nav className={styles.sidebarNav}>
@@ -76,9 +85,11 @@ export async function DashboardLayout({ children, activeTab = "overview" }) {
 
           <div className={styles.sidebarFooter}>
             <div className={styles.helpCard}>
-              <p className={styles.helpEyebrow}>Upgrade to Pro</p>
+              <p className={styles.helpEyebrow}>{isOwnerView ? "Upgrade to Pro" : "Build Your Local List"}</p>
               <p className={styles.helpText}>
-                Get 2x more visibility across the region.
+                {isOwnerView
+                  ? "Get 2x more visibility across the region."
+                  : "Save places you love and come back to them any time."}
               </p>
             </div>
           </div>
@@ -104,6 +115,15 @@ export async function DashboardLayout({ children, activeTab = "overview" }) {
                   <span className={styles.profileRole}>{user?.role || "OWNER"}</span>
                 </div>
               </div>
+
+              <form action={logoutAction} className={styles.logoutForm}>
+                <button type="submit" className={styles.logoutButton}>
+                  <span className="material-icons" aria-hidden="true">
+                    logout
+                  </span>
+                  <span>Log out</span>
+                </button>
+              </form>
             </div>
           </header>
 

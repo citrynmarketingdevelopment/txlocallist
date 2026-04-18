@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import formStyles from "../../new/form.module.css";
 import { updateBusinessAction } from "@/app/actions/businesses";
+import { BusinessHoursEditor } from "../../BusinessHoursEditor";
+import { createBusinessHoursFormState } from "@/lib/business-hours";
 
 /**
  * Business edit form.
@@ -26,6 +28,7 @@ export function EditBusinessForm({ business, cities, categories }) {
     address: business.address || "",
     latitude: business.lat ?? "",
     longitude: business.lng ?? "",
+    hours: createBusinessHoursFormState(business.hours),
     categoryIds: business.categories.map((bc) => bc.categoryId),
     tags: business.tags?.map((bt) => bt.tag.name).join(", ") || "",
   });
@@ -88,6 +91,7 @@ export function EditBusinessForm({ business, cities, categories }) {
         address: formData.address,
         latitude: formData.latitude,
         longitude: formData.longitude,
+        hours: formData.hours,
         categoryIds: formData.categoryIds,
         tags: formData.tags
           .split(",")
@@ -278,6 +282,16 @@ export function EditBusinessForm({ business, cities, categories }) {
             />
           </div>
         </div>
+
+        <BusinessHoursEditor
+          hours={formData.hours}
+          onChange={(hours) =>
+            setFormData((prev) => ({
+              ...prev,
+              hours,
+            }))
+          }
+        />
 
         <h3 style={{ marginTop: "2rem" }}>Categories & Tags</h3>
 

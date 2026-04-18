@@ -1,0 +1,160 @@
+.panel {
+  border: var(--stroke-thin);
+  border-radius: var(--radius-lg);
+  background: rgba(248, 237, 210, 0.22);
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--retro-brown);
+}
+
+.description {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.rows {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(110px, 130px) minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(45, 36, 30, 0.08);
+}
+
+.row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.dayLabel {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.dayName {
+  font-weight: 700;
+  color: var(--retro-brown);
+}
+
+.dayShort {
+  display: none;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.timeFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.timeField {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.timeLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(45, 36, 30, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.timeInput {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: var(--stroke-thin);
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--retro-brown);
+  font: inherit;
+}
+
+.timeInput:disabled {
+  background: rgba(255, 255, 255, 0.55);
+  color: rgba(45, 36, 30, 0.45);
+}
+
+.separator {
+  align-self: center;
+  color: rgba(45, 36, 30, 0.5);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.closedToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.8rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(45, 36, 30, 0.12);
+  border-radius: 999px;
+  background: white;
+  color: var(--retro-brown);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.closedToggle input {
+  accent-color: var(--retro-teal);
+}
+
+@media (max-width: 880px) {
+  .row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .closedToggle {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .panel {
+    padding: 0.9rem;
+  }
+
+  .dayName {
+    display: none;
+  }
+
+  .dayShort {
+    display: inline;
+  }
+
+  .timeFields {
+    grid-template-columns: 1fr;
+  }
+
+  .separator {
+    display: none;
+  }
+}
