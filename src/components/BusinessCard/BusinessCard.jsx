@@ -66,3 +66,5 @@ export default function BusinessCard({ business, badgeTone = "yellow", href }) {
     </article>
   );
 }
+
+// this do be a comment
