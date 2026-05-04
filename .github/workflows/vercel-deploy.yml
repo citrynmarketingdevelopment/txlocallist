@@ -30,6 +30,24 @@ jobs:
       - name: Pull Environment Variables for Prisma
         run: vercel env pull .env --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
+      - name: Validate Database Environment Variables
+        shell: bash
+        run: |
+          if ! grep -q '^DATABASE_URL=' .env && ! grep -q '^DATABASE_URL_UNPOOLED=' .env; then
+            echo "Missing DATABASE_URL and DATABASE_URL_UNPOOLED in Vercel production environment variables."
+            exit 1
+          fi
+
+      - name: Expose Database Variables to GitHub Actions
+        shell: bash
+        run: |
+          if grep -q '^DATABASE_URL_UNPOOLED=' .env; then
+            grep '^DATABASE_URL_UNPOOLED=' .env >> "$GITHUB_ENV"
+          fi
+          if grep -q '^DATABASE_URL=' .env; then
+            grep '^DATABASE_URL=' .env >> "$GITHUB_ENV"
+          fi
+
       - name: Build Project Artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
