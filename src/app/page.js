@@ -104,7 +104,7 @@ export default function Home() {
           </div>
 
           <h1 className={styles.heroHeading}>
-            Find What&apos;s <br />
+            your mum <br />
             <span className={styles.heroPrimary}>Local .</span>{" "}
             <span className={styles.heroUnderline}>Fast.</span>
           </h1>
