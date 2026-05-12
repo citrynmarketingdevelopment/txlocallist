@@ -33,6 +33,10 @@ export default async function ResultsPage({ searchParams }) {
   const params = await searchParams;
   const q   = params?.q   ?? "";
   const loc = params?.loc ?? "";
+  const availableTags = await prisma.tag.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, slug: true },
+  });
 
   const user = await getCurrentUser().catch(() => null);
   const dashboardPath = user ? getDashboardPath(user.role) : null;
@@ -87,6 +91,7 @@ export default async function ResultsPage({ searchParams }) {
       dashboardPath={dashboardPath}
       savedIds={savedIds}
       initialFavoriteBusinesses={favoriteBusinesses}
+      availableTags={availableTags}
     />
   );
 }

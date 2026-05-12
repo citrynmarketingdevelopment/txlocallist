@@ -39,7 +39,6 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      // Return metadata to the client callback
       return {
         uploadedBy: metadata.userId,
         url: file.ufsUrl ?? file.url,

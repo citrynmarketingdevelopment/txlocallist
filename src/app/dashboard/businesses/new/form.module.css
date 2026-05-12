@@ -167,6 +167,55 @@
   transition: color var(--dur-sm) var(--ease-snap);
 }
 
+/* Hiring roles */
+.roleList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.roleRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.roleAddButton,
+.roleRemoveButton {
+  border: var(--stroke-thin);
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 0.9rem;
+  font-family: var(--font-accent), cursive;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--dur-sm) var(--ease-snap);
+}
+
+.roleAddButton {
+  align-self: flex-start;
+  background-color: rgba(74, 157, 156, 0.1);
+  color: var(--retro-teal);
+  border-color: var(--retro-teal);
+}
+
+.roleAddButton:hover {
+  background-color: var(--retro-teal);
+  color: white;
+}
+
+.roleRemoveButton {
+  background-color: rgba(214, 73, 51, 0.08);
+  color: var(--retro-red);
+  border-color: rgba(214, 73, 51, 0.4);
+}
+
+.roleRemoveButton:hover {
+  background-color: var(--retro-red);
+  color: white;
+}
+
 /* Photo Placeholder */
 .photoPlaceholder {
   padding: 3rem 2rem;
@@ -285,6 +334,10 @@
   }
 
   .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .roleRow {
     grid-template-columns: 1fr;
   }
 

@@ -23,13 +23,13 @@ export default async function NewBusinessPage() {
   }
 
   let cities = [];
-  let categories = [];
+  let tags = [];
   let schemaNotice = null;
 
   try {
-    [cities, categories] = await Promise.all([
+    [cities, tags] = await Promise.all([
       prisma.city.findMany({ orderBy: { name: "asc" } }),
-      prisma.category.findMany({ orderBy: { name: "asc" } }),
+      prisma.tag.findMany({ orderBy: { name: "asc" } }),
     ]);
   } catch (error) {
     if (!isMissingPrismaTableError(error)) {
@@ -55,12 +55,12 @@ export default async function NewBusinessPage() {
           <div className={styles.emptyState}>
             <h2 className={styles.emptyStateTitle}>Form Not Ready Yet</h2>
             <p className={styles.emptyStateDescription}>
-              {schemaNotice} Once the database is updated, the city and category options will appear here.
+              {schemaNotice} Once the database is updated, the city and tag options will appear here.
             </p>
           </div>
         </div>
       ) : (
-        <CreateBusinessForm cities={cities} categories={categories} />
+        <CreateBusinessForm cities={cities} tags={tags} />
       )}
     </DashboardLayout>
   );

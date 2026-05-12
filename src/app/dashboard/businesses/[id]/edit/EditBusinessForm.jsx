@@ -7,11 +7,24 @@ import { updateBusinessAction } from "@/app/actions/businesses";
 import { BusinessHoursEditor } from "../../BusinessHoursEditor";
 import { createBusinessHoursFormState } from "@/lib/business-hours";
 
+function parseHiringRoles(raw) {
+  if (!raw) return [""];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [""];
+    const roles = parsed.map((role) => role?.toString().trim()).filter(Boolean);
+    return roles.length > 0 ? roles : [""];
+  } catch {
+    return [""];
+  }
+}
+
 /**
  * Business edit form.
  * Similar to CreateBusinessForm but for existing listings.
  */
-export function EditBusinessForm({ business, cities, categories }) {
+export function EditBusinessForm({ business, cities, tags }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -29,26 +42,53 @@ export function EditBusinessForm({ business, cities, categories }) {
     latitude: business.lat ?? "",
     longitude: business.lng ?? "",
     hours: createBusinessHoursFormState(business.hours),
-    categoryIds: business.categories.map((bc) => bc.categoryId),
-    tags: business.tags?.map((bt) => bt.tag.name).join(", ") || "",
+    tagIds: business.tags?.map((bt) => bt.tagId) || [],
+    isHiring: business.isHiring ?? false,
+    hiringRoles: parseHiringRoles(business.hiringRoles),
   });
 
   // Handle input changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      ...(name === "isHiring" && checked && prev.hiringRoles.length === 0
+        ? { hiringRoles: [""] }
+        : {}),
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
-  // Handle category selection
-  const handleCategoryToggle = (categoryId) => {
+  const handleTagToggle = (tagId) => {
     setFormData((prev) => ({
       ...prev,
-      categoryIds: prev.categoryIds.includes(categoryId)
-        ? prev.categoryIds.filter((id) => id !== categoryId)
-        : [...prev.categoryIds, categoryId],
+      tagIds: prev.tagIds.includes(tagId)
+        ? prev.tagIds.filter((id) => id !== tagId)
+        : [...prev.tagIds, tagId],
+    }));
+  };
+
+  const handleHiringRoleChange = (index, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      hiringRoles: prev.hiringRoles.map((role, i) => (i === index ? value : role)),
+    }));
+  };
+
+  const addHiringRole = () => {
+    setFormData((prev) => ({
+      ...prev,
+      hiringRoles: [...prev.hiringRoles, ""],
+    }));
+  };
+
+  const removeHiringRole = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      hiringRoles:
+        prev.hiringRoles.length <= 1
+          ? [""]
+          : prev.hiringRoles.filter((_, i) => i !== index),
     }));
   };
 
@@ -74,8 +114,8 @@ export function EditBusinessForm({ business, cities, categories }) {
       setError("Address is required");
       return;
     }
-    if (formData.categoryIds.length === 0) {
-      setError("Select at least one category");
+    if (formData.isHiring && !formData.hiringRoles.some((role) => role.trim().length > 0)) {
+      setError("Add at least one hiring role when hiring is enabled");
       return;
     }
 
@@ -92,11 +132,9 @@ export function EditBusinessForm({ business, cities, categories }) {
         latitude: formData.latitude,
         longitude: formData.longitude,
         hours: formData.hours,
-        categoryIds: formData.categoryIds,
-        tags: formData.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
+        tagIds: formData.tagIds,
+        isHiring: formData.isHiring,
+        hiringRoles: formData.hiringRoles,
       });
 
       if (!result.success) {
@@ -293,40 +331,76 @@ export function EditBusinessForm({ business, cities, categories }) {
           }
         />
 
-        <h3 style={{ marginTop: "2rem" }}>Categories & Tags</h3>
+        <h3 style={{ marginTop: "2rem" }}>Tags</h3>
 
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>Business Categories *</label>
-          <div className={formStyles.categoryGrid}>
-            {categories.map((category) => (
-              <label key={category.id} className={formStyles.categoryCheckbox}>
-                <input
-                  type="checkbox"
-                  checked={formData.categoryIds.includes(category.id)}
-                  onChange={() => handleCategoryToggle(category.id)}
-                />
-                <span className={formStyles.categoryLabel}>
-                  {category.icon ? `${category.icon} ` : ""}{category.name}
-                </span>
-              </label>
-            ))}
-          </div>
+          <label className={formStyles.label}>Tags (admin-managed, optional)</label>
+          {tags.length > 0 ? (
+            <div className={formStyles.categoryGrid}>
+              {tags.map((tag) => (
+                <label key={tag.id} className={formStyles.categoryCheckbox}>
+                  <input
+                    type="checkbox"
+                    checked={formData.tagIds.includes(tag.id)}
+                    onChange={() => handleTagToggle(tag.id)}
+                  />
+                  <span className={formStyles.categoryLabel}>{tag.name}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className={formStyles.stepDescription}>
+              No admin tags are available yet.
+            </p>
+          )}
         </div>
 
         <div className={formStyles.formGroup}>
-          <label htmlFor="tags" className={formStyles.label}>
-            Tags (comma-separated, optional)
+          <label className={formStyles.checkboxLabel}>
+            <input
+              type="checkbox"
+              name="isHiring"
+              checked={formData.isHiring}
+              onChange={handleChange}
+            />
+            <span>This business is currently hiring</span>
           </label>
-          <input
-            type="text"
-            id="tags"
-            name="tags"
-            value={formData.tags}
-            onChange={handleChange}
-            placeholder="e.g., organic, locally-owned, pet-friendly"
-            className={formStyles.input}
-          />
+          <p className={formStyles.checkboxHint}>
+            Turn this on to show a hiring card on your public listing
+          </p>
         </div>
+
+        {formData.isHiring && (
+          <div className={formStyles.formGroup}>
+            <label className={formStyles.label}>Hiring Roles *</label>
+            <div className={formStyles.roleList}>
+              {formData.hiringRoles.map((role, index) => (
+                <div key={index} className={formStyles.roleRow}>
+                  <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => handleHiringRoleChange(index, e.target.value)}
+                    placeholder="e.g., Server, Barista, Shift Manager"
+                    className={formStyles.input}
+                  />
+                  {formData.hiringRoles.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeHiringRole(index)}
+                      className={formStyles.roleRemoveButton}
+                      aria-label="Remove role"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={addHiringRole} className={formStyles.roleAddButton}>
+              + Add Role
+            </button>
+          </div>
+        )}
       </div>
 
       <div className={formStyles.formNavigation}>

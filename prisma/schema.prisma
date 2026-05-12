@@ -177,6 +177,8 @@ model Business {
   phone           String?
   email           String?
   website         String?
+  isHiring        Boolean  @default(false)
+  hiringRoles     String   @default("[]")
 
   // Location
   address         String
@@ -213,6 +215,7 @@ model Business {
   jobs            Job[]
   favorites       Favorite[]
   events          Event[]
+  applications    BusinessApplication[]
 
   @@unique([slug, cityId]) // slug is unique per city, not global
   @@index([ownerId])
@@ -289,6 +292,22 @@ model SocialLink {
   createdAt   DateTime @default(now())
 
   @@index([businessId, platform])
+}
+
+model BusinessApplication {
+  id             String   @id @default(cuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  firstName      String
+  lastName       String
+  email          String
+  role           String
+  resumeUrl      String
+  resumeFileName String?
+  createdAt      DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([email])
 }
 
 // =============================================================================

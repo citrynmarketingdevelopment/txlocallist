@@ -32,6 +32,10 @@ function isValidHttpUrl(value) {
   }
 }
 
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function slugify(value) {
   return value
     .toLowerCase()
@@ -39,8 +43,25 @@ function slugify(value) {
     .replace(/^-|-$/g, "");
 }
 
-function normalizeTagNames(tags = []) {
-  return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
+function normalizeIdList(values = []) {
+  if (!Array.isArray(values)) return [];
+  return [...new Set(values.map((value) => value?.toString().trim()).filter(Boolean))];
+}
+
+function normalizeHiringRoles(values = []) {
+  if (!Array.isArray(values)) return [];
+  return [...new Set(values.map((value) => value?.toString().trim()).filter(Boolean))];
+}
+
+function parseStoredHiringRoles(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return normalizeHiringRoles(parsed);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -66,6 +87,7 @@ function generateSlug(name, city) {
  *   - phone (optional)
  *   - email (optional)
  *   - website (optional, must be valid URL)
+ *   - isHiring (optional, boolean checkbox)
  *   - categoryIds (optional, comma-separated or array)
  *   - tagIds (optional, comma-separated or array)
  *   - photoUrl (optional, must be valid URL)
@@ -91,6 +113,8 @@ export async function createBusinessAction(_prevState, formData) {
   const phone = getTextValue(formData, "phone");
   const email = getTextValue(formData, "email");
   const website = getTextValue(formData, "website");
+  const isHiring = formData.get("isHiring") === "on";
+  const hiringRoles = normalizeHiringRoles(formData.getAll("hiringRoles"));
   const photoUrl = getTextValue(formData, "photoUrl");
   const photoAlt = getTextValue(formData, "photoAlt") || name;
 
@@ -145,6 +169,10 @@ export async function createBusinessAction(_prevState, formData) {
 
   if (photoUrl && !isValidHttpUrl(photoUrl)) {
     fieldErrors.photoUrl = "Enter a valid photo URL starting with http:// or https://.";
+  }
+
+  if (isHiring && hiringRoles.length === 0) {
+    fieldErrors.hiringRoles = "Add at least one hiring role when hiring is enabled.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -221,6 +249,8 @@ export async function createBusinessAction(_prevState, formData) {
       phone: phone || null,
       email: email || null,
       website: website || null,
+      isHiring,
+      hiringRoles: JSON.stringify(hiringRoles),
       ownerId: user.id,
       planId: freePlan.id,
       status: "DRAFT",
@@ -383,6 +413,10 @@ export async function archiveBusinessAction(businessId) {
  */
 export async function createBusinessFromFormAction(data) {
   const user = await requireUser();
+  const categoryIds = normalizeIdList(data.categoryIds);
+  const tagIds = normalizeIdList(data.tagIds);
+  const isHiring = Boolean(data.isHiring);
+  const hiringRoles = normalizeHiringRoles(data.hiringRoles);
 
   // Only OWNER or ADMIN can create businesses
   if (user.role !== "OWNER" && user.role !== "ADMIN") {
@@ -410,6 +444,10 @@ export async function createBusinessFromFormAction(data) {
     return { success: false, message: "Enter a valid website URL." };
   }
 
+  if (isHiring && hiringRoles.length === 0) {
+    return { success: false, message: "Add at least one hiring role when hiring is enabled." };
+  }
+
   // Verify city exists
   const city = await prisma.city.findUnique({ where: { id: data.cityId } });
   if (!city) {
@@ -417,18 +455,29 @@ export async function createBusinessFromFormAction(data) {
   }
 
   // Verify categories exist
-  if (data.categoryIds && data.categoryIds.length > 0) {
+  if (categoryIds.length > 0) {
     const selectedCategories = await prisma.category.findMany({
-      where: { id: { in: data.categoryIds } },
+      where: { id: { in: categoryIds } },
       select: { id: true },
     });
 
-    if (selectedCategories.length !== data.categoryIds.length) {
+    if (selectedCategories.length !== categoryIds.length) {
       return { success: false, message: "One or more selected categories are no longer available." };
     }
   }
 
-  const tagNames = normalizeTagNames(data.tags);
+  // Verify tags exist
+  if (tagIds.length > 0) {
+    const selectedTags = await prisma.tag.findMany({
+      where: { id: { in: tagIds } },
+      select: { id: true },
+    });
+
+    if (selectedTags.length !== tagIds.length) {
+      return { success: false, message: "One or more selected tags are no longer available." };
+    }
+  }
+
   let normalizedHours = [];
 
   try {
@@ -488,31 +537,23 @@ export async function createBusinessFromFormAction(data) {
           phone: data.phone?.trim() || null,
           email: data.email?.trim().toLowerCase() || null,
           website: data.website?.trim() || null,
+          isHiring,
+          hiringRoles: JSON.stringify(hiringRoles),
           lat,
           lng,
           ownerId: user.id,
           planId: freePlan.id,
           status: "DRAFT",
           categories:
-            data.categoryIds && data.categoryIds.length > 0
+            categoryIds.length > 0
               ? {
-                  create: data.categoryIds.map((categoryId) => ({ categoryId })),
+                  create: categoryIds.map((categoryId) => ({ categoryId })),
                 }
               : undefined,
           tags:
-            tagNames.length > 0
+            tagIds.length > 0
               ? {
-                  create: tagNames.map((tagName) => ({
-                    tag: {
-                      connectOrCreate: {
-                        where: { slug: slugify(tagName) },
-                        create: {
-                          name: tagName,
-                          slug: slugify(tagName),
-                        },
-                      },
-                    },
-                  })),
+                  create: tagIds.map((tagId) => ({ tagId })),
                 }
               : undefined,
           photos:
@@ -569,6 +610,10 @@ export async function createBusinessFromFormAction(data) {
  */
 export async function updateBusinessAction(businessId, data) {
   const user = await requireUser();
+  const categoryIds = normalizeIdList(data.categoryIds);
+  const tagIds = normalizeIdList(data.tagIds);
+  const isHiring = Boolean(data.isHiring);
+  const hiringRoles = normalizeHiringRoles(data.hiringRoles);
 
   // Verify ownership
   const business = await prisma.business.findUnique({
@@ -605,6 +650,10 @@ export async function updateBusinessAction(businessId, data) {
     return { success: false, message: "Enter a valid website URL." };
   }
 
+  if (isHiring && hiringRoles.length === 0) {
+    return { success: false, message: "Add at least one hiring role when hiring is enabled." };
+  }
+
   // Verify city exists
   const city = await prisma.city.findUnique({ where: { id: data.cityId } });
   if (!city) {
@@ -612,18 +661,29 @@ export async function updateBusinessAction(businessId, data) {
   }
 
   // Verify categories exist
-  if (data.categoryIds && data.categoryIds.length > 0) {
+  if (categoryIds.length > 0) {
     const selectedCategories = await prisma.category.findMany({
-      where: { id: { in: data.categoryIds } },
+      where: { id: { in: categoryIds } },
       select: { id: true },
     });
 
-    if (selectedCategories.length !== data.categoryIds.length) {
+    if (selectedCategories.length !== categoryIds.length) {
       return { success: false, message: "One or more selected categories are no longer available." };
     }
   }
 
-  const tagNames = normalizeTagNames(data.tags);
+  // Verify tags exist
+  if (tagIds.length > 0) {
+    const selectedTags = await prisma.tag.findMany({
+      where: { id: { in: tagIds } },
+      select: { id: true },
+    });
+
+    if (selectedTags.length !== tagIds.length) {
+      return { success: false, message: "One or more selected tags are no longer available." };
+    }
+  }
+
   let normalizedHours = null;
 
   try {
@@ -659,32 +719,24 @@ export async function updateBusinessAction(businessId, data) {
           phone: data.phone || null,
           email: data.email?.trim().toLowerCase() || null,
           website: data.website?.trim() || null,
+          isHiring,
+          hiringRoles: JSON.stringify(hiringRoles),
           address: data.address.trim(),
           cityId: data.cityId,
           lat,
           lng,
           categories:
-            data.categoryIds && data.categoryIds.length > 0
+            categoryIds.length > 0
               ? {
                   deleteMany: {},
-                  create: data.categoryIds.map((categoryId) => ({ categoryId })),
+                  create: categoryIds.map((categoryId) => ({ categoryId })),
                 }
               : undefined,
           tags:
-            tagNames.length > 0
+            tagIds.length > 0
               ? {
                   deleteMany: {},
-                  create: tagNames.map((tagName) => ({
-                    tag: {
-                      connectOrCreate: {
-                        where: { slug: slugify(tagName) },
-                        create: {
-                          name: tagName,
-                          slug: slugify(tagName),
-                        },
-                      },
-                    },
-                  })),
+                  create: tagIds.map((tagId) => ({ tagId })),
                 }
               : { deleteMany: {} },
         },
@@ -736,4 +788,75 @@ export async function publishBusinessFormAction(formData) {
   if (!businessId) return;
   await publishBusinessAction(businessId);
   redirect("/dashboard/businesses");
+}
+
+/**
+ * Submit a public business application.
+ * Used by /business/[slug]/apply.
+ */
+export async function submitBusinessApplicationAction(data) {
+  const slug = data?.slug?.toString().trim() ?? "";
+  const firstName = data?.firstName?.toString().trim() ?? "";
+  const lastName = data?.lastName?.toString().trim() ?? "";
+  const email = data?.email?.toString().trim() ?? "";
+  const role = data?.role?.toString().trim() ?? "";
+  const resumeUrl = data?.resumeUrl?.toString().trim() ?? "";
+  const resumeFileName = data?.resumeFileName?.toString().trim() ?? null;
+
+  if (!slug) {
+    return { success: false, message: "Invalid listing." };
+  }
+  if (!firstName) {
+    return { success: false, message: "First name is required." };
+  }
+  if (!lastName) {
+    return { success: false, message: "Last name is required." };
+  }
+  if (!email || !isValidEmail(email)) {
+    return { success: false, message: "Enter a valid email address." };
+  }
+  if (!resumeUrl || !isValidHttpUrl(resumeUrl)) {
+    return { success: false, message: "Upload your resume before applying." };
+  }
+
+  const business = await prisma.business.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      status: true,
+      isHiring: true,
+      hiringRoles: true,
+    },
+  });
+
+  if (!business || business.status !== "ACTIVE" || !business.isHiring) {
+    return { success: false, message: "This business is not accepting applications right now." };
+  }
+
+  const hiringRoles = parseStoredHiringRoles(business.hiringRoles);
+  if (hiringRoles.length === 0) {
+    return { success: false, message: "No hiring roles are currently available for this listing." };
+  }
+  if (!role || !hiringRoles.includes(role)) {
+    return { success: false, message: "Select a valid role before applying." };
+  }
+
+  try {
+    await prisma.businessApplication.create({
+      data: {
+        businessId: business.id,
+        firstName,
+        lastName,
+        email: email.toLowerCase(),
+        role,
+        resumeUrl,
+        resumeFileName,
+      },
+    });
+  } catch (error) {
+    console.error("Error submitting business application:", error);
+    return { success: false, message: "Failed to submit application. Please try again." };
+  }
+
+  return { success: true, message: "Application submitted successfully!" };
 }

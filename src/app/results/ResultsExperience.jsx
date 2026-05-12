@@ -217,6 +217,7 @@ export default function ResultsExperience({
   dashboardPath = null,
   savedIds = [],
   initialFavoriteBusinesses = [],
+  availableTags = [],
 }) {
   const router    = useRouter();
   const urlParams = useSearchParams();
@@ -684,28 +685,28 @@ export default function ResultsExperience({
               </button>
               {showCategories && (
                 <div className="cities-dropdown">
-                  {[
-                    { label: "Food & Drink", icon: "restaurant",     q: "food"    },
-                    { label: "Retail",       icon: "shopping_bag",   q: "retail"  },
-                    { label: "Coffee",       icon: "coffee",         q: "coffee"  },
-                    { label: "Beauty",       icon: "spa",            q: "beauty"  },
-                    { label: "Fitness",      icon: "fitness_center", q: "fitness" },
-                  ].map((cat) => (
-                    <button
-                      key={cat.label}
-                      type="button"
-                      className="font-accent city-option"
-                      onClick={() => {
-                        setShowCategories(false);
-                        setActiveTab("businesses");
-                        replaceResultsUrl({ query: cat.q, location: lastSearch.loc, type: "businesses" });
-                        runSearch(cat.q, lastSearch.loc, "", "search");
-                      }}
-                    >
-                      <span className="material-icons city-option-pin">{cat.icon}</span>
-                      {cat.label}
-                    </button>
-                  ))}
+                  {availableTags.length > 0 ? (
+                    availableTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        className="font-accent city-option"
+                        onClick={() => {
+                          setShowCategories(false);
+                          setActiveTab("businesses");
+                          replaceResultsUrl({ query: tag.name, location: lastSearch.loc, type: "businesses" });
+                          runSearch(tag.name, lastSearch.loc, "", "search");
+                        }}
+                      >
+                        <span className="material-icons city-option-pin">sell</span>
+                        {tag.name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="font-accent city-option" aria-disabled>
+                      No categories available
+                    </div>
+                  )}
                 </div>
               )}
             </div>

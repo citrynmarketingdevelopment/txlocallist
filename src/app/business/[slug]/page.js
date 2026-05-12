@@ -57,6 +57,17 @@ function getDomain(url) {
   catch { return url; }
 }
 
+function parseHiringRoles(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((role) => role?.toString().trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export default async function BusinessDetailPage({ params }) {
   const { slug } = await params;
 
@@ -111,6 +122,8 @@ export default async function BusinessDetailPage({ params }) {
   const mapsQuery = encodeURIComponent(`${business.address}, ${business.city.name}, TX`);
   const mapsUrl   = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
   const pageUrl   = `https://txlocalist.com/business/${slug}`;
+  const hiringRoles = parseHiringRoles(business.hiringRoles);
+  const hiringApplyHref = `/business/${slug}/apply`;
 
   return (
     <>
@@ -311,7 +324,35 @@ export default async function BusinessDetailPage({ params }) {
           </div>
         </section>
 
-        {/* ── LOCATION ── */}
+        {/* HIRING */}
+        {business.isHiring && (
+          <section className={styles.hiringSection}>
+            <div className={styles.hiringCard}>
+              <div>
+                <p className={styles.eyebrow}>Now Hiring</p>
+                <h2 className={styles.hiringTitle}>{business.name} is hiring</h2>
+                <p className={styles.hiringDescription}>
+                  Interested in joining the team? Apply to available roles or reach out directly.
+                </p>
+                {hiringRoles.length > 0 && (
+                  <div className={styles.hiringRolesRow}>
+                    {hiringRoles.map((role) => (
+                      <span key={role} className={styles.hiringRoleChip}>
+                        {role}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Link href={hiringApplyHref} className={styles.hiringApplyBtn}>
+                Apply
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {/* LOCATION */}
         <section className={styles.locationSection}>
           <div className={styles.locationCard}>
 
@@ -365,7 +406,7 @@ export default async function BusinessDetailPage({ params }) {
 
         {/* ── JOBS ── */}
         {features.JOB_POSTINGS > 0 && business.jobs.length > 0 && (
-          <section className={styles.jobsSection}>
+          <section id="open-positions" className={styles.jobsSection}>
             <p className={styles.eyebrow}>Now Hiring</p>
             <h2 className={styles.jobsSectionTitle}>
               Open Positions ({business.jobs.length})
